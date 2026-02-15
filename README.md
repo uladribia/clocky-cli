@@ -11,7 +11,7 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 - **Status** — see what's running and for how long
 - **List** recent time entries in a formatted table
 - **Browse projects** with optional fuzzy search and client filtering
-- **Ubuntu launchers** — bind `Super+F1` / `Super+F2` to start/stop timers via a GUI dialog
+- **Ubuntu launchers** — bind `Super+C` / `Super+X` to start/stop timers via a GUI dialog
 - No local data persistence — only your API key is stored (in `.env`)
 
 ---
@@ -65,22 +65,22 @@ CLOCKIFY_API_KEY=your_api_key_here
 > **First run without a key?** clocky will detect the missing key, print setup
 > instructions, and offer to open the Clockify API key page in your browser automatically.
 
-### 3. Install the package
+### 3. Install
+
+#### Option A (recommended): one-step installer
+
+```bash
+./install.sh
+```
+
+#### Option B: local development install
 
 ```bash
 # Create the venv and install all dependencies
 uv sync
 
-# Install clocky itself as an editable package (makes the `clocky` binary available)
-uv pip install -e .
-```
-
-### 4. Verify
-
-```bash
+# Run from the project
 uv run clocky --help
-# or, if your venv is active:
-clocky --help
 ```
 
 ### 5. Shell completion (optional but recommended)
@@ -135,21 +135,7 @@ clocky <TAB>          # shows: start  stop  status  list  projects
 clocky start --<TAB>  # shows: --project  --description  --tag
 ```
 
-### 6. Quick Install (recommended)
-
-Run the install script for a complete setup:
-
-```bash
-./install.sh
-```
-
-This will:
-1. Install `clocky` globally via `uv tool`
-2. Run interactive setup to configure your API key
-3. Install shell completion
-4. Set up Ubuntu launcher scripts
-
-### 7. Manual global install
+### 4. Manual global install (alternative)
 
 ```bash
 # Install globally
