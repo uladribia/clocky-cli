@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # clocky-launcher.sh — Ubuntu launcher for clocky-cli.
 #
 # Triggered by a keyboard shortcut (e.g., Super+C). Opens a zenity entry dialog

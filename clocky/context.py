@@ -1,4 +1,7 @@
-"""Application context — resolves API client, user, and workspace."""
+"""Application context — resolves API client, user, and workspace.
+
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

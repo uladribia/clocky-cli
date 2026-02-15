@@ -1,4 +1,7 @@
-"""clocky-cli — Clockify command-line interface."""
+"""clocky-cli — Clockify command-line interface.
+
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

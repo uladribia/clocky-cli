@@ -1,4 +1,7 @@
-"""Rich-based display helpers for clocky-cli output."""
+"""Rich-based display helpers for clocky-cli output.
+
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

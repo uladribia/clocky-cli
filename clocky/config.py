@@ -1,4 +1,7 @@
-"""Configuration loading from environment / .env file."""
+"""Configuration loading from environment / .env file.
+
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

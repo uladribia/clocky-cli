@@ -1,4 +1,7 @@
-"""Fuzzy search utilities using rapidfuzz."""
+"""Fuzzy search utilities using rapidfuzz.
+
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

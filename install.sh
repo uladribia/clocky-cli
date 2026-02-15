@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # install.sh — Install clocky-cli globally and run interactive setup.
 #
 # This script:

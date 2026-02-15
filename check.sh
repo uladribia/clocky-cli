@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # check.sh — postprocessing script for clocky-cli.
 # Run after every code change: formats, lints, type-checks, and tests.
 # Also ensures the package is installed in editable mode so the `clocky`

@@ -1,4 +1,7 @@
-"""Clockify API client."""
+"""Clockify API client.
+
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

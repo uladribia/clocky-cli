@@ -1,4 +1,7 @@
-"""Interactive setup for clocky-cli."""
+"""Interactive setup for clocky-cli.
+
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

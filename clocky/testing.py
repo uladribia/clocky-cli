@@ -1,4 +1,7 @@
-"""Mock API and test fixtures for clocky-cli."""
+"""Mock API and test fixtures for clocky-cli.
+
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

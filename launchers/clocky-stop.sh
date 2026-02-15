@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # clocky-stop.sh — Ubuntu launcher to stop the currently running Clockify timer.
 #
 # Triggered by a keyboard shortcut. Stops the active timer and shows a

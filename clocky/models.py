@@ -1,4 +1,7 @@
-"""Pydantic models for Clockify API data structures."""
+"""Pydantic models for Clockify API data structures.
+
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
