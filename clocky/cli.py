@@ -169,6 +169,7 @@ def start(
         raise typer.Exit(0)
 
     project_id: str | None = chosen.id
+    console.print(f"Project: {chosen.name}")
     console.print(f"[dim]Project:[/dim] [cyan]{chosen.name}[/cyan]")
 
     tag_ids: list[str] = []

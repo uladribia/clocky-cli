@@ -50,29 +50,22 @@ if [[ -z "$QUERY" ]]; then
 fi
 clocky_log "query=$QUERY"
 
-DESCRIPTION=$(zenity \
-    --entry \
-    --title="Clocky — Description" \
-    --text="Description (optional):" \
-    --entry-text="" \
-    --width=420 \
-    2>/dev/null) || DESCRIPTION=""
-clocky_log "description=$DESCRIPTION"
-
-if [[ -n "$DESCRIPTION" ]]; then
-    OUTPUT=$(clocky start --non-interactive "$QUERY" --description "$DESCRIPTION" 2>&1) || {
-        clocky_log "clocky start failed: $OUTPUT"
-        notify "Failed to start timer: $OUTPUT"
-        exit 1
-    }
-else
-    OUTPUT=$(clocky start --non-interactive "$QUERY" 2>&1) || {
-        clocky_log "clocky start failed: $OUTPUT"
-        notify "Failed to start timer: $OUTPUT"
-        exit 1
-    }
-fi
+# Do not prompt for description in launcher mode.
+OUTPUT=$(clocky start --non-interactive "$QUERY" 2>&1) || {
+    clocky_log "clocky start failed: $OUTPUT"
+    notify "Failed to start timer: $OUTPUT"
+    exit 1
+}
 
 clocky_log "clocky start output: $OUTPUT"
+
+# Try to display chosen project name.
+# `clocky start` prints a line: "Project: <name>".
+CHOSEN_PROJECT=$(echo "$OUTPUT" | sed -n 's/.*Project:[[:space:]]*//p' | head -1)
+if [[ -n "$CHOSEN_PROJECT" ]]; then
+    zenity --info --title="Clocky" --text="Started: $CHOSEN_PROJECT" --width=360 2>/dev/null || true
+else
+    zenity --info --title="Clocky" --text="Timer started" --width=240 2>/dev/null || true
+fi
 
 notify "Timer started"
