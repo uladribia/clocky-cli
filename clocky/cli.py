@@ -34,6 +34,8 @@ app = typer.Typer(
     add_completion=True,
 )
 
+# Subcommands are registered below (see clocky.cli_tag_map).
+
 console = Console()
 
 
@@ -301,4 +303,8 @@ def projects(
 
 def main() -> None:
     """Entry point."""
+    # Ensure subcommands are registered when invoked via the installed console script.
+    from clocky.cli_tag_map import register
+
+    register(app, console)
     app()

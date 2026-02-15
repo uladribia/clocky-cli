@@ -55,10 +55,16 @@ class TagMap:
         path = _map_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
-            json.dumps(self.project_to_tag, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            json.dumps(self.project_to_tag, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
         )
         try:
             path.chmod(0o600)
         except PermissionError:
             # Best-effort on systems that do not support chmod.
             pass
+
+
+def tag_map_path() -> Path:
+    """Return the path to the persisted tag map file."""
+    return _map_path()
