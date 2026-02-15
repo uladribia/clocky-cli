@@ -2,12 +2,11 @@
 # SPDX-License-Identifier: MIT
 # clocky-launcher.sh — Ubuntu launcher for clocky-cli.
 #
-# Simple GUI flow:
-# 1) Ask for a project name (fuzzy query)
-# 2) Ask for an optional description
-# 3) Run `clocky start --non-interactive <query> ...`
-#
-# This avoids terminal prompts (questionary) which do not work from .desktop.
+# GUI flow (desktop-safe):
+# 1) Ask for project query (zenity entry)
+# 2) Try to start timer non-interactively (best fuzzy match)
+# 3) If tag mapping is missing, ask for tag query (zenity entry) and retry
+# 4) Show a notification with the chosen project/tag
 
 set -euo pipefail
 
@@ -40,29 +39,63 @@ QUERY=$(zenity \
     --entry-text="" \
     --width=420 \
     2>/dev/null) || {
-    clocky_log "zenity query cancelled"
+    clocky_log "zenity project cancelled"
     exit 0
 }
 
 if [[ -z "$QUERY" ]]; then
-    clocky_log "empty query"
+    clocky_log "empty project query"
     exit 0
 fi
 clocky_log "query=$QUERY"
 
-# Do not prompt for description in launcher mode.
 OUTPUT=$(clocky start --non-interactive "$QUERY" 2>&1) || {
     clocky_log "clocky start failed: $OUTPUT"
-    notify "Failed to start timer: $OUTPUT"
-    exit 1
+
+    if echo "$OUTPUT" | grep -q "CLOCKY_ERROR_MISSING_TAG_MAP"; then
+        TAG_QUERY=$(zenity \
+            --entry \
+            --title="Clocky — Tag" \
+            --text="No tag mapped for this project. Enter a tag (fuzzy):" \
+            --entry-text="" \
+            --width=420 \
+            2>/dev/null) || {
+            clocky_log "zenity tag cancelled"
+            exit 0
+        }
+
+        if [[ -z "$TAG_QUERY" ]]; then
+            clocky_log "empty tag query"
+            exit 0
+        fi
+        clocky_log "tag_query=$TAG_QUERY"
+
+        # Retry with tag. Non-interactive will pick best fuzzy match.
+        OUTPUT=$(clocky start --non-interactive "$QUERY" --tag "$TAG_QUERY" 2>&1) || {
+            clocky_log "clocky start (with tag) failed: $OUTPUT"
+            notify "Failed to start timer: $OUTPUT"
+            exit 1
+        }
+    else
+        notify "Failed to start timer: $OUTPUT"
+        exit 1
+    fi
 }
 
 clocky_log "clocky start output: $OUTPUT"
 
-# Extract chosen project name for notification.
-# `clocky start` prints a line: "Project: <name>".
 CHOSEN_PROJECT=$(echo "$OUTPUT" | sed -n 's/.*Project:[[:space:]]*//p' | head -1)
-if [[ -n "$CHOSEN_PROJECT" ]]; then
+CHOSEN_TAG=$(echo "$OUTPUT" | sed -n 's/.*Tag (chosen):[[:space:]]*//p' | head -1)
+if [[ -z "$CHOSEN_TAG" ]]; then
+    CHOSEN_TAG=$(echo "$OUTPUT" | sed -n 's/.*Tag (mapped):[[:space:]]*//p' | head -1)
+fi
+if [[ -z "$CHOSEN_TAG" ]]; then
+    CHOSEN_TAG=$(echo "$OUTPUT" | sed -n 's/.*Tag (auto):[[:space:]]*//p' | head -1)
+fi
+
+if [[ -n "$CHOSEN_PROJECT" && -n "$CHOSEN_TAG" ]]; then
+    notify "Timer started: $CHOSEN_PROJECT\nTag: $CHOSEN_TAG"
+elif [[ -n "$CHOSEN_PROJECT" ]]; then
     notify "Timer started: $CHOSEN_PROJECT"
 else
     notify "Timer started"
