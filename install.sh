@@ -71,9 +71,14 @@ LAUNCHER_DIR="$HOME/.local/share/clocky"
 mkdir -p "$LAUNCHER_DIR"
 cp "$SCRIPT_DIR/launchers/clocky-launcher.sh" "$LAUNCHER_DIR/"
 cp "$SCRIPT_DIR/launchers/clocky-stop.sh" "$LAUNCHER_DIR/"
+cp "$SCRIPT_DIR/launchers/clocky-dispatch.sh" "$LAUNCHER_DIR/"
 chmod +x "$LAUNCHER_DIR"/*.sh
 
 echo "✓ Launchers installed to: $LAUNCHER_DIR"
+
+echo ""
+echo "To add an app-menu entry (Super → type 'clocky'):"
+echo "  cp $SCRIPT_DIR/launchers/clocky.desktop ~/.local/share/applications/"
 echo ""
 echo "To set up keyboard shortcuts:"
 echo ""

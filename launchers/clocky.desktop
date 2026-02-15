@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=clocky
+Comment=clocky command launcher (zenity GUI)
+Exec=/bin/bash -lc "$HOME/.local/share/clocky/clocky-dispatch.sh %U"
+Icon=clock
+Terminal=false
+Categories=Utility;
+Keywords=clocky;clockify;timer;time;tracking;
