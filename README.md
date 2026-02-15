@@ -233,7 +233,14 @@ The auto-tag feature uses (in order):
 
 If neither is available:
 - In a terminal: clocky prompts you for a tag (fuzzy), then saves the mapping.
-- In a launcher (.desktop): the launcher prompts you for a tag via zenity, then clocky saves the mapping.
+- In a launcher (.desktop): the launcher prompts you for a tag (free text + confirmation), then clocky saves the mapping.
+
+You can view/edit the mapping:
+
+```bash
+clocky tag-map show
+clocky tag-map edit
+```
 
 This matches the typical Dribia workflow where each project usually maps to one tag (e.g., "Cross-selling" → "Comercial").
 
