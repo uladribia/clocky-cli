@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=clocky start
+Comment=Start a Clockify timer (GUI)
+Exec=/bin/bash -lc "$HOME/.local/share/clocky/clocky-dispatch.sh start %U"
+Icon=clock
+Terminal=false
+Categories=Utility;
+Keywords=clocky;clockify;timer;start;time;tracking;

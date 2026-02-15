@@ -77,8 +77,9 @@ chmod +x "$LAUNCHER_DIR"/*.sh
 echo "✓ Launchers installed to: $LAUNCHER_DIR"
 
 echo ""
-echo "To add an app-menu entry (Super → type 'clocky'):"
-echo "  cp $SCRIPT_DIR/launchers/clocky.desktop ~/.local/share/applications/"
+echo "To add app-menu entries (Super → type 'clocky start' / 'clocky stop'):"
+echo "  cp $SCRIPT_DIR/launchers/clocky-start.desktop ~/.local/share/applications/"
+echo "  cp $SCRIPT_DIR/launchers/clocky-stop.desktop ~/.local/share/applications/"
 echo ""
 echo "To set up keyboard shortcuts:"
 echo ""

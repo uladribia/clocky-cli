@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=clocky stop
+Comment=Stop the current Clockify timer
+Exec=/bin/bash -lc "$HOME/.local/share/clocky/clocky-dispatch.sh stop %U"
+Icon=clock
+Terminal=false
+Categories=Utility;
+Keywords=clocky;clockify;timer;stop;time;tracking;
