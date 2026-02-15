@@ -197,7 +197,8 @@ def list_entries(
     ctx = build_context()
     entries = ctx.api.get_time_entries(ctx.workspace_id, ctx.user.id, limit=limit)
     project_map = {p.id: p.name for p in ctx.api.get_projects(ctx.workspace_id)}
-    print_time_entries(entries, project_map)
+    tag_map = {t.id: t.name for t in ctx.api.get_tags(ctx.workspace_id)}
+    print_time_entries(entries, project_map, tag_map)
 
 
 @app.command()

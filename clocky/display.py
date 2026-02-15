@@ -73,8 +73,19 @@ def print_timer_stopped(entry: TimeEntry) -> None:
     print_success(f"Timer stopped. Duration: [bold yellow]{duration}[/bold yellow]")
 
 
-def print_time_entries(entries: list[TimeEntry], project_map: dict[str, str]) -> None:
-    """Print a table of time entries."""
+def print_time_entries(
+    entries: list[TimeEntry],
+    project_map: dict[str, str],
+    tag_map: dict[str, str] | None = None,
+) -> None:
+    """Print a table of time entries.
+
+    Args:
+        entries: The time entries.
+        project_map: Map of project_id -> project name.
+        tag_map: Optional map of tag_id -> tag name.
+
+    """
     if not entries:
         console.print("\n[dim]No time entries found.[/dim]\n")
         return
@@ -82,13 +93,22 @@ def print_time_entries(entries: list[TimeEntry], project_map: dict[str, str]) ->
     table = Table(title="Recent Time Entries", box=box.ROUNDED, highlight=True)
     table.add_column("Date", style="dim", no_wrap=True)
     table.add_column("Project", style="cyan")
+    table.add_column("Tags", style="magenta")
     table.add_column("Description")
     table.add_column("Duration", justify="right", style="yellow")
 
+    tag_map = tag_map or {}
+
     for entry in entries:
+        tags = "—"
+        if entry.tag_ids:
+            names = [tag_map.get(tid, tid) for tid in entry.tag_ids]
+            tags = ", ".join(names)
+
         table.add_row(
             entry.time_interval.start.strftime("%Y-%m-%d %H:%M"),
             project_map.get(entry.project_id or "", "—"),
+            tags,
             entry.description or "—",
             _get_duration(entry),
         )
