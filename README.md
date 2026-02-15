@@ -300,7 +300,8 @@ clocky-cli/
 ├── check.sh            # Postprocessing: format → lint → typecheck → test
 ├── pyproject.toml
 ├── README.md
-└── SYSTEM.md
+├── SYSTEM.md
+└── AGENTS.md
 ```
 
 ---

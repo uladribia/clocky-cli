@@ -1,6 +1,6 @@
 # SYSTEM — clocky-cli coding practices
 
-Keep changes small, typed, tested, and documented.
+Repository-level standards and technical baseline for humans and agents.
 
 ## Stack
 
@@ -11,32 +11,13 @@ Keep changes small, typed, tested, and documented.
 - Fuzzy: rapidfuzz
 - Quality gates: ruff (format+lint) + ty (typecheck) + pytest
 
-## Non-negotiables
+## Policy summary
 
-- Use `uv` only (no pip/poetry/conda; avoid `uv pip ...`).
-- Every module/function/class has a meaningful Google-style docstring.
-- Type annotations everywhere; `from __future__ import annotations` in every `.py`.
-- Tests are offline and use mocks from `clocky/testing.py` (no mocks in `api.py`).
-- Secrets are never committed. `.env` is ignored; provide `.env.example`.
-- Licensing: repo has `LICENSE` and each `.py`/`.sh` includes `SPDX-License-Identifier: MIT`.
+- Keep changes small, typed, tested, and documented.
+- Use `uv` as the project package/task runner.
+- Maintain offline, deterministic tests.
+- Keep licensing and secret-handling requirements intact.
 
-## Commands
+## Agent-specific execution guide
 
-- Dev sync: `uv sync`
-- Run CLI: `uv run clocky --help`
-- Full checks (after code changes): `./check.sh`
-
-## check.sh (must stay green)
-
-- `uv sync --quiet`
-- `ruff format .`
-- `ruff check . --fix`
-- `ty check .`
-- `pytest`
-
-## Commits
-
-After checks pass:
-
-- `git add -A`
-- `git commit -m "feat: ..."` (or `fix:`, `refactor:`, `test:`, `docs:`, `chore:`)
+See `AGENTS.md` for operational workflow, guardrails, checks, and commit conventions.

@@ -301,10 +301,12 @@ def projects(
     print_projects(all_projects, client_filter=client_label)
 
 
+# Register subcommands at import time so they also appear in `--help`.
+from clocky.cli_tag_map import register as _register_tag_map  # noqa: E402
+
+_register_tag_map(app, console)
+
+
 def main() -> None:
     """Entry point."""
-    # Ensure subcommands are registered when invoked via the installed console script.
-    from clocky.cli_tag_map import register
-
-    register(app, console)
     app()
