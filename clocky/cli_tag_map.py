@@ -32,9 +32,22 @@ def register(app: typer.Typer, console: Console) -> None:
 
     @tag_app.command("show")
     def show() -> None:
-        """Show the tag map (project_id → tag_id)."""
+        """Show the tag map (project → tag) using names.
+
+        The underlying file stores IDs, but this output resolves them to
+        names for readability.
+        """
+        ctx = build_context()
+        projects = {p.id: p.name for p in ctx.api.get_projects(ctx.workspace_id)}
+        tags = {t.id: t.name for t in ctx.api.get_tags(ctx.workspace_id)}
+
         mapping = TagMap.load().project_to_tag
-        console.print(json.dumps(mapping, indent=2, sort_keys=True))
+        resolved = {
+            projects.get(project_id, project_id): tags.get(tag_id, tag_id)
+            for project_id, tag_id in mapping.items()
+        }
+
+        console.print(json.dumps(resolved, indent=2, sort_keys=True, ensure_ascii=False))
         console.print(f"\n[dim]Path:[/dim] {tag_map_path()}")
 
     @tag_app.command("edit")
@@ -62,9 +75,23 @@ def register(app: typer.Typer, console: Console) -> None:
 
     @tag_app.command("set")
     def set_mapping(project_id: str, tag_id: str) -> None:
-        """Set mapping for a project id."""
+        """Set mapping for a project id.
+
+        Note: this command accepts IDs. Prefer `clocky tag-map pick` for a
+        name-based interactive flow.
+        """
         TagMap.load().set(project_id, tag_id).save()
-        console.print(f"[green]Mapped[/green] {project_id} → {tag_id}")
+
+        ctx = build_context()
+        project_name = next(
+            (p.name for p in ctx.api.get_projects(ctx.workspace_id) if p.id == project_id),
+            project_id,
+        )
+        tag_name = next(
+            (t.name for t in ctx.api.get_tags(ctx.workspace_id) if t.id == tag_id), tag_id
+        )
+
+        console.print(f"[green]Mapped[/green] {project_name} → {tag_name}")
 
     @tag_app.command("pick")
     def pick() -> None:
@@ -111,6 +138,13 @@ def register(app: typer.Typer, console: Console) -> None:
         if project_id not in mapping:
             console.print("[dim]No mapping for that project id.[/dim]")
             return
+
+        ctx = build_context()
+        project_name = next(
+            (p.name for p in ctx.api.get_projects(ctx.workspace_id) if p.id == project_id),
+            project_id,
+        )
+
         mapping.pop(project_id)
         TagMap(project_to_tag=mapping).save()
-        console.print(f"[green]Removed[/green] mapping for {project_id}")
+        console.print(f"[green]Removed[/green] mapping for {project_name}")
