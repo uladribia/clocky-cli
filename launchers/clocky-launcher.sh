@@ -13,6 +13,9 @@
 
 set -euo pipefail
 
+# shellcheck source=/dev/null
+source "$(dirname "$0")/lib.sh"
+
 notify() {
     if command -v notify-send &>/dev/null; then
         notify-send --icon=clock "Clocky" "$1"
@@ -24,7 +27,11 @@ die() {
     exit 1
 }
 
+clocky_log "launcher=start"
+clocky_log_env_snapshot
+
 if ! command -v clocky &>/dev/null; then
+    clocky_log "ERROR: clocky not found"
     die "clocky is not installed.\n\nRun: uv tool install /path/to/clocky-cli"
 fi
 
@@ -34,9 +41,16 @@ QUERY=$(zenity \
     --text="Project name (fuzzy search):" \
     --entry-text="" \
     --width=420 \
-    2>/dev/null) || exit 0
+    2>/dev/null) || {
+    clocky_log "zenity query cancelled"
+    exit 0
+}
 
-[[ -z "$QUERY" ]] && exit 0
+if [[ -z "$QUERY" ]]; then
+    clocky_log "empty query"
+    exit 0
+fi
+clocky_log "query=$QUERY"
 
 DESCRIPTION=$(zenity \
     --entry \
@@ -45,20 +59,25 @@ DESCRIPTION=$(zenity \
     --entry-text="" \
     --width=420 \
     2>/dev/null) || DESCRIPTION=""
+clocky_log "description=$DESCRIPTION"
 
 if [[ -n "$DESCRIPTION" ]]; then
     OUTPUT=$(clocky start "$QUERY" --description "$DESCRIPTION" 2>&1) || {
+        clocky_log "clocky start failed: $OUTPUT"
         notify "Failed to start timer: $OUTPUT"
         exit 1
     }
 else
     OUTPUT=$(clocky start "$QUERY" 2>&1) || {
+        clocky_log "clocky start failed: $OUTPUT"
         notify "Failed to start timer: $OUTPUT"
         exit 1
     }
 fi
 
-# Best-effort notification. (Project name is already printed by clocky if run in a terminal.)
+clocky_log "clocky start output: $OUTPUT"
+
+# Best-effort notification.
 if echo "$OUTPUT" | grep -q "✔"; then
     notify "Timer started"
 else

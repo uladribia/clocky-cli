@@ -3,6 +3,10 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+
+# Logs
+logs/
+
 .ruff_cache/
 .pytest_cache/
 dist/
