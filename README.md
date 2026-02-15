@@ -173,6 +173,9 @@ clocky start "mobile" --tag "billable" --tag "meeting"
 
 # Disable auto-tag inference
 clocky start "mobile" --no-auto-tag
+
+# Non-interactive mode (best match only; no prompts)
+clocky start --non-interactive "cros-selling"
 ```
 
 ### Stop the running timer

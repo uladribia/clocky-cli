@@ -45,9 +45,30 @@ def _now_utc() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _pick_one[T](matches: list[tuple[T, float]], attr: str) -> T | None:
-    """Show interactive picker if multiple matches, return selection or None."""
+def _pick_one[T](
+    matches: list[tuple[T, float]],
+    attr: str,
+    *,
+    non_interactive: bool = False,
+) -> T | None:
+    """Select one item from fuzzy matches.
+
+    In interactive mode, shows a questionary picker if multiple matches.
+    In non-interactive mode, returns the top match.
+
+    Args:
+        matches: List of (item, score) pairs.
+        attr: Attribute name used for display.
+        non_interactive: If True, never prompt; returns top match.
+
+    Returns:
+        The chosen item, or None if cancelled.
+
+    """
     if len(matches) == 1:
+        return matches[0][0]
+
+    if non_interactive:
         return matches[0][0]
 
     choices = [
@@ -127,6 +148,13 @@ def start(
     auto_tag: Annotated[
         bool, typer.Option("--auto-tag/--no-auto-tag", help="Auto-infer tag from history")
     ] = True,
+    non_interactive: Annotated[
+        bool,
+        typer.Option(
+            "--non-interactive/--interactive",
+            help="Never prompt; auto-pick best fuzzy match",
+        ),
+    ] = False,
 ) -> None:
     """Start a new timer."""
     ctx = build_context()
@@ -136,7 +164,7 @@ def start(
     if not matches:
         print_error(f"No projects matching '{project}'")
         raise typer.Exit(1)
-    chosen = _pick_one(matches, "name")
+    chosen = _pick_one(matches, "name", non_interactive=non_interactive)
     if not chosen:
         raise typer.Exit(0)
 
