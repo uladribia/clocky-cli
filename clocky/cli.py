@@ -26,6 +26,7 @@ from clocky.display import (
 )
 from clocky.fuzzy import fuzzy_search
 from clocky.models import StartTimerRequest, StopTimerRequest
+from clocky.tag_map import TagMap
 
 app = typer.Typer(
     name="clocky",
@@ -167,26 +168,59 @@ def start(
 
     tag_ids: list[str] = []
 
-    # Explicit tags override auto-tag
+    all_tags = ctx.api.get_tags(ctx.workspace_id)
+    tags_by_id = {t.id: t for t in all_tags}
+
+    # 1) Explicit tags: prompt/select each; also persist 1:1 project→tag mapping
     if tags is not None:
-        all_tags = ctx.api.get_tags(ctx.workspace_id)
         for t in tags:
             tag_matches = fuzzy_search(t, all_tags, key=lambda tag: tag.name)
             if not tag_matches:
                 print_error(f"Tag '{t}' not found, skipping")
                 continue
-            chosen_tag = _pick_one(tag_matches, "name")
+            chosen_tag = _pick_one(tag_matches, "name", non_interactive=non_interactive)
             if chosen_tag:
                 tag_ids.append(chosen_tag.id)
-    elif auto_tag and project_id:
-        # Infer tag from recent entries for this project
-        inferred_tag_id = _infer_tag_for_project(project_id, ctx.workspace_id, ctx.user.id)
-        if inferred_tag_id:
-            tag_ids.append(inferred_tag_id)
-            # Get tag name for display
-            all_tags = ctx.api.get_tags(ctx.workspace_id)
-            tag_name = next((t.name for t in all_tags if t.id == inferred_tag_id), inferred_tag_id)
-            console.print(f"[dim]Tag (auto):[/dim] [magenta]{tag_name}[/magenta]")
+
+        if project_id and len(tag_ids) == 1:
+            TagMap.load().set(project_id, tag_ids[0]).save()
+
+    # 2) No tags provided: use stored mapping, then history inference, else ask user
+    elif project_id:
+        tag_map = TagMap.load()
+        mapped = tag_map.get(project_id)
+        if mapped and mapped in tags_by_id:
+            tag_ids.append(mapped)
+            console.print(f"[dim]Tag (mapped):[/dim] [magenta]{tags_by_id[mapped].name}[/magenta]")
+
+        elif auto_tag:
+            inferred_tag_id = _infer_tag_for_project(project_id, ctx.workspace_id, ctx.user.id)
+            if inferred_tag_id and inferred_tag_id in tags_by_id:
+                tag_ids.append(inferred_tag_id)
+                console.print(
+                    f"[dim]Tag (auto):[/dim] [magenta]{tags_by_id[inferred_tag_id].name}[/magenta]"
+                )
+                tag_map.set(project_id, inferred_tag_id).save()
+
+        if not tag_ids and sys.stdin.isatty():
+            console.print(f"\nNo tag found for project [cyan]{chosen.name}[/cyan].")
+            tag_query = typer.prompt("Tag (fuzzy)").strip()
+            if tag_query:
+                tag_matches = fuzzy_search(tag_query, all_tags, key=lambda tag: tag.name)
+                if tag_matches:
+                    chosen_tag = _pick_one(tag_matches, "name", non_interactive=non_interactive)
+                    if chosen_tag:
+                        tag_ids.append(chosen_tag.id)
+                        tag_map.set(project_id, chosen_tag.id).save()
+                        console.print(
+                            f"[dim]Tag (chosen):[/dim] [magenta]{chosen_tag.name}[/magenta]"
+                        )
+
+        if not tag_ids and non_interactive:
+            print_error(
+                f"No tag mapping found for '{chosen.name}'. Run interactively once with --tag."
+            )
+            raise typer.Exit(1)
 
     request = StartTimerRequest(
         start=_now_utc(),
