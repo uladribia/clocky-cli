@@ -3,7 +3,7 @@ Version=1.0
 Type=Application
 Name=Clocky — Stop Timer
 Comment=Stop the currently running Clockify timer
-Exec=/bin/bash -c 'CLOCKY_DIR=$HOME/.local/share/clocky-cli $HOME/.local/share/clocky-cli/launchers/clocky-stop.sh'
+Exec=/bin/bash -c '$HOME/.local/share/clocky/clocky-stop.sh'
 Icon=clock
 Terminal=false
 Categories=Utility;

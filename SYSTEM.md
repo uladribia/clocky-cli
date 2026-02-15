@@ -15,8 +15,8 @@ Follow these rules precisely for every task.
 
 ## Environment
 
-- **Use `uv` exclusively** — never `pip`, `poetry`, `pipenv`, `conda`.
-- Commands: `uv sync`, `uv add <pkg>`, `uv add --dev <pkg>`, `uv run <cmd>`, `uv pip install -e .`
+- **Use `uv` exclusively** — never `pip`, `poetry`, `pipenv`, `conda` (including `uv pip ...` unless absolutely necessary).
+- Commands: `uv sync`, `uv add <pkg>`, `uv add --dev <pkg>`, `uv run <cmd>`, `uv tool install .`
 
 ---
 
@@ -71,7 +71,7 @@ testpaths = ["tests"]
 ```bash
 #!/usr/bin/env bash
 set -e
-uv pip install -e . --quiet
+uv sync --quiet
 uv run ruff format .
 uv run ruff check . --fix
 uv run ty check .
