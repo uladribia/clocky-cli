@@ -26,6 +26,8 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 
 ## Installation
 
+> Version: **v1.1.0**
+
 ### 1. Clone the repository
 
 ```bash
@@ -240,6 +242,7 @@ You can view/edit the mapping:
 ```bash
 clocky tag-map show
 clocky tag-map edit
+clocky tag-map pick
 ```
 
 This matches the typical Dribia workflow where each project usually maps to one tag (e.g., "Cross-selling" → "Comercial").
