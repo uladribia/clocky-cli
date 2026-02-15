@@ -5,6 +5,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import sys
 from collections import Counter
 from datetime import UTC, datetime
 from typing import Annotated
@@ -53,22 +54,16 @@ def _pick_one[T](
 ) -> T | None:
     """Select one item from fuzzy matches.
 
-    In interactive mode, shows a questionary picker if multiple matches.
-    In non-interactive mode, returns the top match.
-
-    Args:
-        matches: List of (item, score) pairs.
-        attr: Attribute name used for display.
-        non_interactive: If True, never prompt; returns top match.
-
-    Returns:
-        The chosen item, or None if cancelled.
-
+    Rules:
+    - If there is only one match: return it.
+    - If non-interactive: return best match.
+    - If stdin is not a TTY (e.g. .desktop launch): return best match.
+    - Otherwise: prompt user to pick.
     """
     if len(matches) == 1:
         return matches[0][0]
 
-    if non_interactive:
+    if non_interactive or not sys.stdin.isatty():
         return matches[0][0]
 
     choices = [
@@ -89,8 +84,6 @@ def _infer_tag_for_project(
     Looks at the last 50 entries for this project and returns the most
     commonly used tag ID, if any.
     """
-    from clocky.context import build_context
-
     ctx = build_context()
     entries = ctx.api.get_time_entries(workspace_id, user_id, limit=50)
 

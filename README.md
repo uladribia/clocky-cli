@@ -10,7 +10,7 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 - **Stop** the currently running timer
 - **Status** — see what's running and for how long
 - **List** recent time entries in a formatted table
-- **Browse projects** with optional fuzzy search and client filtering
+- **Browse projects** for a client (with optional fuzzy search)
 - **Ubuntu launchers** — bind `Super+C` / `Super+X` to start/stop timers via a GUI dialog
 - No local data persistence — only your API key is stored (in `.env`)
 
@@ -203,17 +203,11 @@ clocky list --limit 25
 ### Browse projects
 
 ```bash
-# List all projects
-clocky projects
+# List projects for a client (fuzzy client match)
+clocky projects "Dribia"
 
-# Fuzzy search projects by name
-clocky projects --search "data pipelin"
-
-# Filter by client (fuzzy matched)
-clocky projects --client "acme"
-
-# Both together
-clocky projects --client "globex" --search "pipeline"
+# Filter projects by name within that client
+clocky projects "Dribia" --search "pipeline"
 ```
 
 ---
@@ -225,14 +219,15 @@ The `launchers/` directory contains shell scripts and `.desktop` files to contro
 ### How it works
 
 Press **Super+C** (or your chosen shortcut) to:
-1. Open a dialog to type/search a project name
-2. Fuzzy-match and pick from results
-3. Optionally add a description
-4. Start timer with **auto-inferred tag** based on your history
+1. Open a dialog to type a project name (fuzzy)
+2. Start the timer using the best fuzzy match (non-interactive)
+3. Show a notification with the chosen project
 
 Press **Super+X** to instantly stop the timer with a notification.
 
 The auto-tag feature looks at your last 50 entries for the selected project and automatically applies the most commonly used tag — perfect for projects that always use the same tag (e.g., "Cross-selling" → "Comercial").
+
+> Note: When starting from a launcher (.desktop), clocky runs in non-interactive mode (no terminal prompts).
 
 ### Setup
 
