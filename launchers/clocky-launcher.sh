@@ -53,11 +53,18 @@ OUTPUT=$(clocky start --non-interactive "$QUERY" 2>&1) || {
     clocky_log "clocky start failed: $OUTPUT"
 
     if echo "$OUTPUT" | grep -q "CLOCKY_ERROR_MISSING_TAG_MAP"; then
+        # Try to suggest a tag based on history (if any).
+        SUGGESTED_TAG=$(clocky list --limit 30 2>/dev/null | awk 'NR>3 {print $3}' | head -1)
+        DEFAULT_TAG=""
+        if [[ -n "$SUGGESTED_TAG" && "$SUGGESTED_TAG" != "—" ]]; then
+            DEFAULT_TAG="$SUGGESTED_TAG"
+        fi
+
         TAG_QUERY=$(zenity \
             --entry \
             --title="Clocky — Tag" \
             --text="No tag mapped for this project. Enter a tag (fuzzy):" \
-            --entry-text="" \
+            --entry-text="$DEFAULT_TAG" \
             --width=420 \
             2>/dev/null) || {
             clocky_log "zenity tag cancelled"
@@ -85,13 +92,7 @@ OUTPUT=$(clocky start --non-interactive "$QUERY" 2>&1) || {
 clocky_log "clocky start output: $OUTPUT"
 
 CHOSEN_PROJECT=$(echo "$OUTPUT" | sed -n 's/.*Project:[[:space:]]*//p' | head -1)
-CHOSEN_TAG=$(echo "$OUTPUT" | sed -n 's/.*Tag (chosen):[[:space:]]*//p' | head -1)
-if [[ -z "$CHOSEN_TAG" ]]; then
-    CHOSEN_TAG=$(echo "$OUTPUT" | sed -n 's/.*Tag (mapped):[[:space:]]*//p' | head -1)
-fi
-if [[ -z "$CHOSEN_TAG" ]]; then
-    CHOSEN_TAG=$(echo "$OUTPUT" | sed -n 's/.*Tag (auto):[[:space:]]*//p' | head -1)
-fi
+CHOSEN_TAG=$(echo "$OUTPUT" | sed -n 's/.*Tag:[[:space:]]*//p' | head -1)
 
 if [[ -n "$CHOSEN_PROJECT" && -n "$CHOSEN_TAG" ]]; then
     notify "Timer started: $CHOSEN_PROJECT\nTag: $CHOSEN_TAG"

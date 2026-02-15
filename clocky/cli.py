@@ -225,6 +225,11 @@ def start(
             )
             raise typer.Exit(1)
 
+    if tag_ids:
+        tag_obj = tags_by_id.get(tag_ids[0])
+        tag_label = tag_obj.name if tag_obj else tag_ids[0]
+        console.print(f"Tag: {tag_label}")
+
     request = StartTimerRequest(
         start=_now_utc(),
         description=description,
