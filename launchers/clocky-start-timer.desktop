@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Clocky — Start Timer
+Comment=Fuzzy-search a Clockify project and start a timer
+Exec=/bin/bash -c 'CLOCKY_DIR=$HOME/.local/share/clocky-cli $HOME/.local/share/clocky-cli/launchers/clocky-launcher.sh'
+Icon=clock
+Terminal=false
+Categories=Utility;
+Keywords=clockify;timer;time;tracking;
