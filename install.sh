@@ -34,7 +34,8 @@ echo "  ⚙️  Running setup..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Run interactive setup
-clocky setup
+# If user cancels, continue installation.
+clocky setup || true
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
