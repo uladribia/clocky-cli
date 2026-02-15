@@ -32,9 +32,14 @@ def api() -> ClockifyAPI:
     """
     from dotenv import dotenv_values
 
+    # Use the same resolution as the app: repo .env OR XDG config .env
     env_path = Path(__file__).parent.parent / ".env"
     if not env_path.exists():
-        pytest.skip(".env file not found")
+        xdg_env = Path.home() / ".config" / "clocky" / ".env"
+        if xdg_env.exists():
+            env_path = xdg_env
+        else:
+            pytest.skip(".env file not found")
 
     values = dotenv_values(env_path)
     api_key = values.get("CLOCKIFY_API_KEY", "")
