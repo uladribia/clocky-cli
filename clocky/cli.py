@@ -118,7 +118,7 @@ def status() -> None:
 
 @app.command()
 def start(
-    project: Annotated[str, typer.Option("-p", "--project", help="Project name (fuzzy)")] = "",
+    project: Annotated[str, typer.Argument(..., help="Project name to fuzzy-search")],
     description: Annotated[str, typer.Option("-d", "--description", help="Description")] = "",
     tags: Annotated[list[str] | None, typer.Option("-t", "--tag", help="Tag name(s)")] = None,
     auto_tag: Annotated[
@@ -127,19 +127,18 @@ def start(
 ) -> None:
     """Start a new timer."""
     ctx = build_context()
-    project_id: str | None = None
 
-    if project:
-        all_projects = ctx.api.get_projects(ctx.workspace_id)
-        matches = fuzzy_search(project, all_projects, key=lambda p: p.name)
-        if not matches:
-            print_error(f"No projects matching '{project}'")
-            raise typer.Exit(1)
-        chosen = _pick_one(matches, "name")
-        if not chosen:
-            raise typer.Exit(0)
-        project_id = chosen.id
-        console.print(f"[dim]Project:[/dim] [cyan]{chosen.name}[/cyan]")
+    all_projects = ctx.api.get_projects(ctx.workspace_id)
+    matches = fuzzy_search(project, all_projects, key=lambda p: p.name)
+    if not matches:
+        print_error(f"No projects matching '{project}'")
+        raise typer.Exit(1)
+    chosen = _pick_one(matches, "name")
+    if not chosen:
+        raise typer.Exit(0)
+
+    project_id: str | None = chosen.id
+    console.print(f"[dim]Project:[/dim] [cyan]{chosen.name}[/cyan]")
 
     tag_ids: list[str] = []
 
@@ -177,13 +176,13 @@ def start(
 
 @app.command()
 def stop() -> None:
-    """Stop the currently running timer."""
+    """Stop the currently running timer (if any)."""
     ctx = build_context()
     running = ctx.api.get_running_timer(ctx.workspace_id, ctx.user.id)
 
     if not running:
         print_no_timer()
-        raise typer.Exit(1)
+        return
 
     entry = ctx.api.stop_timer(ctx.workspace_id, ctx.user.id, StopTimerRequest(end=_now_utc()))
     print_timer_stopped(entry)
@@ -203,25 +202,25 @@ def list_entries(
 
 @app.command()
 def projects(
-    search: Annotated[str, typer.Option("-s", "--search", help="Fuzzy search")] = "",
-    client: Annotated[str, typer.Option("-c", "--client", help="Filter by client")] = "",
+    client: Annotated[str, typer.Argument(..., help="Client name to fuzzy-match")],
+    search: Annotated[str, typer.Option("-s", "--search", help="Fuzzy search (optional)")] = "",
 ) -> None:
-    """List projects."""
+    """List projects for a client."""
     ctx = build_context()
-    all_projects = ctx.api.get_projects(ctx.workspace_id)
-    client_label: str | None = None
 
-    if client:
-        clients = ctx.api.get_clients(ctx.workspace_id)
-        client_matches = fuzzy_search(client, clients, key=lambda c: c.name)
-        if not client_matches:
-            print_error(f"No clients matching '{client}'")
-            raise typer.Exit(1)
-        chosen_client = _pick_one(client_matches, "name")
-        if not chosen_client:
-            raise typer.Exit(0)
-        client_label = chosen_client.name
-        all_projects = [p for p in all_projects if p.client_id == chosen_client.id]
+    clients = ctx.api.get_clients(ctx.workspace_id)
+    client_matches = fuzzy_search(client, clients, key=lambda c: c.name)
+    if not client_matches:
+        print_error(f"No clients matching '{client}'")
+        raise typer.Exit(1)
+    chosen_client = _pick_one(client_matches, "name")
+    if not chosen_client:
+        raise typer.Exit(0)
+
+    client_label = chosen_client.name
+    all_projects = [
+        p for p in ctx.api.get_projects(ctx.workspace_id) if p.client_id == chosen_client.id
+    ]
 
     if search:
         proj_matches = fuzzy_search(search, all_projects, key=lambda p: p.name)

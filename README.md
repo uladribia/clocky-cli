@@ -132,7 +132,7 @@ uv run clocky --show-completion > ~/.config/fish/completions/clocky.fish
 
 ```bash
 clocky <TAB>          # shows: start  stop  status  list  projects
-clocky start --<TAB>  # shows: --project  --description  --tag
+clocky start --<TAB>  # shows: --description  --tag  --no-auto-tag
 ```
 
 ### 4. Manual global install (alternative)
@@ -163,16 +163,16 @@ clocky --help
 ```bash
 # Start with fuzzy project search (interactive pick list if multiple matches)
 # Tags are auto-inferred from your recent entries for this project!
-clocky start --project "web redesin"
+clocky start "web redesin"
 
 # With a description
-clocky start --project "mobile app" --description "Sprint planning"
+clocky start "mobile app" --description "Sprint planning"
 
 # With explicit tags (overrides auto-tag)
-clocky start --project "mobile" --tag "billable" --tag "meeting"
+clocky start "mobile" --tag "billable" --tag "meeting"
 
 # Disable auto-tag inference
-clocky start --project "mobile" --no-auto-tag
+clocky start "mobile" --no-auto-tag
 ```
 
 ### Stop the running timer
