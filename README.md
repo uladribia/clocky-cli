@@ -1,6 +1,6 @@
 # clocky-cli
 
-A command-line interface for [Clockify](https://clockify.me) — start/stop timers, browse projects, and view time entries directly from your terminal. Includes Ubuntu desktop launchers to trigger timers from a keyboard shortcut using a `zenity` GUI picker.
+A command-line interface for [Clockify](https://clockify.me) — start/stop timers, browse projects, and view time entries directly from your terminal. Includes Ubuntu desktop launchers to trigger timers from a keyboard shortcut using a small `zenity` GUI flow.
 
 ---
 
@@ -175,6 +175,7 @@ clocky start "mobile" --tag "billable" --tag "meeting"
 clocky start "mobile" --no-auto-tag
 
 # Non-interactive mode (best match only; no prompts)
+# Useful for scripts and launchers.
 clocky start --non-interactive "cros-selling"
 ```
 
@@ -220,14 +221,21 @@ The `launchers/` directory contains shell scripts and `.desktop` files to contro
 
 Press **Super+C** (or your chosen shortcut) to:
 1. Open a dialog to type a project name (fuzzy)
-2. Start the timer using the best fuzzy match (non-interactive)
-3. Show a notification with the chosen project
+2. Start the timer using the best fuzzy match (no terminal prompts)
+3. If no tag is mapped yet, ask for a tag (free text, fuzzy matched)
+4. Show a notification with the chosen project and tag
 
 Press **Super+X** to instantly stop the timer with a notification.
 
-The auto-tag feature looks at your last 50 entries for the selected project and automatically applies the most commonly used tag — perfect for projects that always use the same tag (e.g., "Cross-selling" → "Comercial").
+The auto-tag feature uses (in order):
+1. A persisted 1:1 **project→tag mapping** (recommended)
+2. Your last 50 entries for the project (history-based inference)
 
-> Note: When starting from a launcher (.desktop), clocky runs in non-interactive mode (no terminal prompts).
+If neither is available:
+- In a terminal: clocky prompts you for a tag (fuzzy), then saves the mapping.
+- In a launcher (.desktop): the launcher prompts you for a tag via zenity, then clocky saves the mapping.
+
+This matches the typical Dribia workflow where each project usually maps to one tag (e.g., "Cross-selling" → "Comercial").
 
 ### Setup
 
