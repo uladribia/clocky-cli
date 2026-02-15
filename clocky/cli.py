@@ -217,8 +217,11 @@ def start(
                         )
 
         if not tag_ids and non_interactive:
+            # Launcher-friendly sentinel for GUI scripts.
+            Console(stderr=True).print("CLOCKY_ERROR_MISSING_TAG_MAP")
             print_error(
-                f"No tag mapping found for '{chosen.name}'. Run interactively once with --tag."
+                f"No tag mapping found for '{chosen.name}'. Provide --tag once to set it, "
+                "or let the launcher prompt you."
             )
             raise typer.Exit(1)
 
