@@ -59,13 +59,11 @@ OUTPUT=$(clocky start --non-interactive "$QUERY" 2>&1) || {
 
 clocky_log "clocky start output: $OUTPUT"
 
-# Try to display chosen project name.
+# Extract chosen project name for notification.
 # `clocky start` prints a line: "Project: <name>".
 CHOSEN_PROJECT=$(echo "$OUTPUT" | sed -n 's/.*Project:[[:space:]]*//p' | head -1)
 if [[ -n "$CHOSEN_PROJECT" ]]; then
-    zenity --info --title="Clocky" --text="Started: $CHOSEN_PROJECT" --width=360 2>/dev/null || true
+    notify "Timer started: $CHOSEN_PROJECT"
 else
-    zenity --info --title="Clocky" --text="Timer started" --width=240 2>/dev/null || true
+    notify "Timer started"
 fi
-
-notify "Timer started"
