@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Configuration loading from environment / .env file.
 
 SPDX-License-Identifier: MIT
@@ -5,9 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import subprocess
 import sys
-import webbrowser
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -17,7 +16,11 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm
 
-CLOCKIFY_API_KEY_URL = "https://app.clockify.me/user/settings#apiKey"
+# Re-exported so that existing callers (including tests) can import from here.
+from clocky.browser import CLOCKIFY_API_KEY_URL
+from clocky.browser import open_browser as _open_browser
+
+__all__ = ["CLOCKIFY_API_KEY_URL", "_open_browser", "Settings", "load_settings"]
 
 _console = Console()
 _err_console = Console(stderr=True)
@@ -52,14 +55,6 @@ def _find_env_file() -> Path:
 
     # Default to XDG config location
     return xdg_config
-
-
-def _open_browser(url: str) -> None:
-    """Open URL in browser. Tries xdg-open first, falls back to webbrowser."""
-    try:
-        subprocess.run(["xdg-open", url], check=True, capture_output=True)  # noqa: S603, S607
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        webbrowser.open(url)
 
 
 def _prompt_open_browser() -> None:

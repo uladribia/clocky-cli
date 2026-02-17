@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pydantic models for Clockify API data structures.
 
 SPDX-License-Identifier: MIT
@@ -10,10 +11,14 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class User(BaseModel):
-    """Clockify user."""
+class _AliasModel(BaseModel):
+    """Base model with ``populate_by_name=True`` for camelCase field aliases."""
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class User(_AliasModel):
+    """Clockify user."""
 
     id: str
     name: str
@@ -28,20 +33,16 @@ class Workspace(BaseModel):
     name: str
 
 
-class Client(BaseModel):
+class Client(_AliasModel):
     """Clockify client."""
-
-    model_config = ConfigDict(populate_by_name=True)
 
     id: str
     name: str
     workspace_id: str = Field(alias="workspaceId")
 
 
-class Project(BaseModel):
+class Project(_AliasModel):
     """Clockify project."""
-
-    model_config = ConfigDict(populate_by_name=True)
 
     id: str
     name: str
@@ -58,10 +59,8 @@ class TimeInterval(BaseModel):
     duration: str | None = None
 
 
-class TimeEntry(BaseModel):
+class TimeEntry(_AliasModel):
     """Clockify time entry."""
-
-    model_config = ConfigDict(populate_by_name=True)
 
     id: str
     description: str = ""
@@ -72,10 +71,8 @@ class TimeEntry(BaseModel):
     tag_ids: list[str] = Field(default_factory=list, alias="tagIds")
 
 
-class Tag(BaseModel):
+class Tag(_AliasModel):
     """Clockify tag."""
-
-    model_config = ConfigDict(populate_by_name=True)
 
     id: str
     name: str

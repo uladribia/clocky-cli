@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Rich-based display helpers for clocky-cli output.
 
 SPDX-License-Identifier: MIT
@@ -42,6 +43,13 @@ def _get_duration(entry: TimeEntry) -> str:
         delta = _ensure_utc(interval.end) - _ensure_utc(interval.start)
         return format_duration(delta)
     return interval.duration or "—"
+
+
+def _print_table(table: Table) -> None:
+    """Print a Rich table surrounded by blank lines."""
+    console.print()
+    console.print(table)
+    console.print()
 
 
 # -----------------------------------------------------------------------------
@@ -116,9 +124,7 @@ def print_time_entries(
             _get_duration(entry),
         )
 
-    console.print()
-    console.print(table)
-    console.print()
+    _print_table(table)
 
 
 def print_projects(projects: list[Project], client_filter: str | None = None) -> None:
@@ -136,9 +142,7 @@ def print_projects(projects: list[Project], client_filter: str | None = None) ->
     for p in projects:
         table.add_row(p.id, p.name, p.client_name or "—")
 
-    console.print()
-    console.print(table)
-    console.print()
+    _print_table(table)
 
 
 def print_success(message: str) -> None:

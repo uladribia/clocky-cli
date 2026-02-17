@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Interactive setup for clocky-cli.
 
 SPDX-License-Identifier: MIT
@@ -11,7 +12,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 
-CLOCKIFY_API_KEY_URL = "https://app.clockify.me/user/settings#apiKey"
+from clocky.browser import CLOCKIFY_API_KEY_URL, open_browser
+
 CONFIG_DIR = Path.home() / ".config" / "clocky"
 ENV_FILE = CONFIG_DIR / ".env"
 
@@ -43,13 +45,7 @@ def setup() -> None:
     console.print(f"  [dim]→ {CLOCKIFY_API_KEY_URL}[/dim]")
 
     if Confirm.ask("\n  Open Clockify settings in browser?", default=True):
-        import subprocess
-        import webbrowser
-
-        try:
-            subprocess.run(["xdg-open", CLOCKIFY_API_KEY_URL], check=True, capture_output=True)
-        except (FileNotFoundError, subprocess.CalledProcessError):
-            webbrowser.open(CLOCKIFY_API_KEY_URL)
+        open_browser(CLOCKIFY_API_KEY_URL)
         console.print("  [dim]Browser opened.[/dim]")
 
     console.print("\n[bold]Step 2:[/bold] Paste your API key below")

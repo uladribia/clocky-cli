@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Clockify API client.
 
 SPDX-License-Identifier: MIT
@@ -5,7 +6,10 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
+from pydantic import BaseModel
 
 from clocky.models import (
     Client,
@@ -42,20 +46,36 @@ class ClockifyAPI:
         )
 
     # -------------------------------------------------------------------------
+    # Private helpers
+    # -------------------------------------------------------------------------
+
+    def _get(self, url: str, *, params: dict[str, str | int] | None = None) -> Any:
+        """Execute a GET request and return the parsed JSON body."""
+        r = self._client.get(url, params=params)
+        r.raise_for_status()
+        return r.json()
+
+    def _get_list[T: BaseModel](
+        self,
+        url: str,
+        model: type[T],
+        *,
+        params: dict[str, str | int] | None = None,
+    ) -> list[T]:
+        """Execute a GET request and validate the JSON array as a list of models."""
+        return [model.model_validate(item) for item in self._get(url, params=params)]
+
+    # -------------------------------------------------------------------------
     # User & Workspace
     # -------------------------------------------------------------------------
 
     def get_user(self) -> User:
         """Fetch the authenticated user."""
-        r = self._client.get("/user")
-        r.raise_for_status()
-        return User.model_validate(r.json())
+        return User.model_validate(self._get("/user"))
 
     def get_workspaces(self) -> list[Workspace]:
         """Fetch all workspaces the user belongs to."""
-        r = self._client.get("/workspaces")
-        r.raise_for_status()
-        return [Workspace.model_validate(w) for w in r.json()]
+        return self._get_list("/workspaces", Workspace)
 
     # -------------------------------------------------------------------------
     # Projects, Clients, Tags
@@ -63,27 +83,19 @@ class ClockifyAPI:
 
     def get_projects(self, workspace_id: str) -> list[Project]:
         """Fetch all projects in a workspace."""
-        r = self._client.get(
-            f"/workspaces/{workspace_id}/projects",
-            params={"page-size": 500},
+        return self._get_list(
+            f"/workspaces/{workspace_id}/projects", Project, params={"page-size": 500}
         )
-        r.raise_for_status()
-        return [Project.model_validate(p) for p in r.json()]
 
     def get_clients(self, workspace_id: str) -> list[Client]:
         """Fetch all clients in a workspace."""
-        r = self._client.get(
-            f"/workspaces/{workspace_id}/clients",
-            params={"page-size": 500},
+        return self._get_list(
+            f"/workspaces/{workspace_id}/clients", Client, params={"page-size": 500}
         )
-        r.raise_for_status()
-        return [Client.model_validate(c) for c in r.json()]
 
     def get_tags(self, workspace_id: str) -> list[Tag]:
         """Fetch all tags in a workspace."""
-        r = self._client.get(f"/workspaces/{workspace_id}/tags")
-        r.raise_for_status()
-        return [Tag.model_validate(t) for t in r.json()]
+        return self._get_list(f"/workspaces/{workspace_id}/tags", Tag)
 
     # -------------------------------------------------------------------------
     # Time Entries
@@ -96,21 +108,18 @@ class ClockifyAPI:
         limit: int = 10,
     ) -> list[TimeEntry]:
         """Fetch recent time entries for a user."""
-        r = self._client.get(
+        return self._get_list(
             f"/workspaces/{workspace_id}/user/{user_id}/time-entries",
+            TimeEntry,
             params={"page-size": limit},
         )
-        r.raise_for_status()
-        return [TimeEntry.model_validate(e) for e in r.json()]
 
     def get_running_timer(self, workspace_id: str, user_id: str) -> TimeEntry | None:
         """Fetch the currently running time entry, or None if no timer is active."""
-        r = self._client.get(
+        entries = self._get(
             f"/workspaces/{workspace_id}/user/{user_id}/time-entries",
             params={"in-progress": "true", "page-size": 1},
         )
-        r.raise_for_status()
-        entries = r.json()
         return TimeEntry.model_validate(entries[0]) if entries else None
 
     def start_timer(self, workspace_id: str, request: StartTimerRequest) -> TimeEntry:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """CLI commands for managing the project→tag mapping.
 
 SPDX-License-Identifier: MIT
@@ -6,17 +7,31 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import questionary
 import typer
 
 from clocky.context import build_context
-from clocky.fuzzy import fuzzy_search
+from clocky.fuzzy import fuzzy_choices, fuzzy_search
 from clocky.tag_map import TagMap, tag_map_path
 
 if TYPE_CHECKING:
     from rich.console import Console
+
+
+def _name_for_id(items: list[Any], id_: str) -> str:
+    """Return the ``name`` of the first item whose ``id`` matches, or ``id_`` as fallback.
+
+    Args:
+        items: Objects with ``.id`` and ``.name`` attributes.
+        id_: The ID to look up.
+
+    Returns:
+        Matching name, or ``id_`` when no match is found.
+
+    """
+    return next((x.name for x in items if x.id == id_), id_)
 
 
 def register(app: typer.Typer, console: Console) -> None:
@@ -83,13 +98,10 @@ def register(app: typer.Typer, console: Console) -> None:
         TagMap.load().set(project_id, tag_id).save()
 
         ctx = build_context()
-        project_name = next(
-            (p.name for p in ctx.api.get_projects(ctx.workspace_id) if p.id == project_id),
-            project_id,
-        )
-        tag_name = next(
-            (t.name for t in ctx.api.get_tags(ctx.workspace_id) if t.id == tag_id), tag_id
-        )
+        projects = ctx.api.get_projects(ctx.workspace_id)
+        tags = ctx.api.get_tags(ctx.workspace_id)
+        project_name = _name_for_id(projects, project_id)
+        tag_name = _name_for_id(tags, tag_id)
 
         console.print(f"[green]Mapped[/green] {project_name} → {tag_name}")
 
@@ -109,10 +121,9 @@ def register(app: typer.Typer, console: Console) -> None:
         if not project_matches:
             raise typer.BadParameter(f"No projects matching '{project_query}'")
 
-        proj_choices = [
-            questionary.Choice(f"{p.name} ({score:.0f}%)", value=p) for p, score in project_matches
-        ]
-        chosen_project = questionary.select("Pick project:", choices=proj_choices).ask()
+        chosen_project = questionary.select(
+            "Pick project:", choices=fuzzy_choices(project_matches)
+        ).ask()
         if not chosen_project:
             return
 
@@ -121,10 +132,7 @@ def register(app: typer.Typer, console: Console) -> None:
         if not tag_matches:
             raise typer.BadParameter(f"No tags matching '{tag_query}'")
 
-        tag_choices = [
-            questionary.Choice(f"{t.name} ({score:.0f}%)", value=t) for t, score in tag_matches
-        ]
-        chosen_tag = questionary.select("Pick tag:", choices=tag_choices).ask()
+        chosen_tag = questionary.select("Pick tag:", choices=fuzzy_choices(tag_matches)).ask()
         if not chosen_tag:
             return
 
@@ -140,10 +148,8 @@ def register(app: typer.Typer, console: Console) -> None:
             return
 
         ctx = build_context()
-        project_name = next(
-            (p.name for p in ctx.api.get_projects(ctx.workspace_id) if p.id == project_id),
-            project_id,
-        )
+        projects = ctx.api.get_projects(ctx.workspace_id)
+        project_name = _name_for_id(projects, project_id)
 
         mapping.pop(project_id)
         TagMap(project_to_tag=mapping).save()

@@ -1,8 +1,9 @@
+# SPDX-License-Identifier: MIT
 """Tests for `clocky tag-map pick`.
 
 SPDX-License-Identifier: MIT
 
-We patch questionary and build_context so the command runs offline.
+We patch questionary and build_context so the command runs fully offline.
 """
 
 from __future__ import annotations
@@ -13,20 +14,10 @@ import pytest
 from typer.testing import CliRunner
 
 import clocky.cli as cli
+import clocky.cli_tag_map as cli_tag_map
 from clocky.context import AppContext
-from clocky.models import Project, Tag, User
 from clocky.tag_map import TagMap
-
-
-class _StubAPI:
-    def get_projects(self, _workspace_id: str) -> list[Project]:
-        return [
-            Project(id="p1", name="Project Alpha", clientId=None),  # type: ignore[call-arg]
-            Project(id="p2", name="Project Beta", clientId=None),  # type: ignore[call-arg]
-        ]
-
-    def get_tags(self, _workspace_id: str) -> list[Tag]:
-        return [Tag(id="t1", name="Comercial", workspaceId="ws")]
+from clocky.testing import MOCK_PROJECTS, MOCK_TAGS, MockClockifyAPI
 
 
 @pytest.fixture
@@ -37,47 +28,40 @@ def runner() -> CliRunner:
 def test_tag_map_pick_persists(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, runner: CliRunner
 ) -> None:
-    # Isolate home so mapping file goes to tmp
+    # Isolate home so the mapping file goes to a temporary directory.
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setattr(Path, "home", staticmethod(lambda: home))
 
-    # Patch build_context
-    user = User(id="u", name="N", email="e", defaultWorkspace="ws")
-    # AppContext.api is typed as ClockifyAPI; for this unit test we only need get_projects/get_tags.
-    ctx = AppContext(api=_StubAPI(), user=user, workspace_id="ws")  # type: ignore[arg-type]
+    # Build an offline context using MockClockifyAPI.
+    api = MockClockifyAPI()
+    user = api.get_user()
+    ctx = AppContext(api=api, user=user, workspace_id=user.default_workspace)
     monkeypatch.setattr(cli, "build_context", lambda: ctx)
+    monkeypatch.setattr(cli_tag_map, "build_context", lambda: ctx)
 
-    # Patch prompts / questionary
-    monkeypatch.setattr(cli.typer, "prompt", lambda *_args, **_kwargs: "Alpha")
+    # Stateful prompt: first call → project query, second → tag query.
+    prompts = iter(["Website", "bill"])
+    monkeypatch.setattr(cli_tag_map.typer, "prompt", lambda *_a, **_k: next(prompts))
 
-    import clocky.cli_tag_map as cli_tag_map
-
-    monkeypatch.setattr(cli_tag_map.typer, "prompt", lambda *_args, **_kwargs: "Alpha")
+    # Stateful questionary.select: first call picks the project, second picks the tag.
+    select_calls = [0]
 
     class _Sel:
-        def __init__(self, value):
+        def __init__(self, value: object) -> None:
             self._value = value
 
-        def ask(self):
+        def ask(self) -> object:
             return self._value
 
-    monkeypatch.setattr(
-        cli_tag_map.questionary, "select", lambda *_a, **_k: _Sel(_StubAPI().get_projects("ws")[0])
-    )
-    # second select returns tag
-    monkeypatch.setattr(
-        cli_tag_map.questionary,
-        "select",
-        lambda *_a, **_k: (
-            _Sel(_StubAPI().get_projects("ws")[0])
-            if "project" in _a[0].lower()
-            else _Sel(_StubAPI().get_tags("ws")[0])
-        ),
-    )
+    def _mock_select(*_args: object, **_kwargs: object) -> _Sel:
+        select_calls[0] += 1
+        return _Sel(MOCK_PROJECTS[0] if select_calls[0] == 1 else MOCK_TAGS[0])
+
+    monkeypatch.setattr(cli_tag_map.questionary, "select", _mock_select)
 
     result = runner.invoke(cli.app, ["tag-map", "pick"])
     assert result.exit_code == 0
 
     m = TagMap.load()
-    assert m.get("p1") == "t1"
+    assert m.get(MOCK_PROJECTS[0].id) == MOCK_TAGS[0].id
