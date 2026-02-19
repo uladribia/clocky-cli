@@ -44,7 +44,7 @@ def fuzzy_search[T](
     results = process.extract(
         query,
         choices,
-        scorer=fuzz.token_sort_ratio,
+        scorer=fuzz.token_set_ratio,
         score_cutoff=cutoff,
         limit=limit,
     )

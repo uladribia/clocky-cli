@@ -71,7 +71,7 @@ class TestJsonOutput:
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert isinstance(data, list)
-        assert len(data) == 4
+        assert len(data) == 5
 
     def test_start_json(
         self, runner: CliRunner, ctx: AppContext, monkeypatch: pytest.MonkeyPatch

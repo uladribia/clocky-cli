@@ -41,6 +41,14 @@ class TestFuzzySearch:
         names = [p.name for p, _ in results]
         assert "Data Pipeline" in names
 
+    def test_token_set_ratio_extra_words(self) -> None:
+        # Test case where query is a subset of the target with token_set_ratio
+        results = fuzzy_search("Data Pipe", MOCK_PROJECTS, lambda p: p.name)
+        names = [p.name for p, _ in results]
+        assert "Data Pipe New" in names
+        # Also assert it's the top match
+        assert results[0][0].name == "Data Pipe New"
+
     def test_limit_respected(self) -> None:
         results = fuzzy_search("a", MOCK_PROJECTS, lambda p: p.name, limit=2)
         assert len(results) <= 2

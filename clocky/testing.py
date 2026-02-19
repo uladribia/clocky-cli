@@ -72,6 +72,14 @@ MOCK_PROJECTS = [
             "clientName": None,
         }
     ),
+    Project.model_validate(
+        {
+            "id": "proj-005",
+            "name": "Data Pipe New",
+            "clientId": "cli-002",
+            "clientName": "Globex Inc",
+        }
+    ),
 ]
 
 MOCK_TAGS = [
