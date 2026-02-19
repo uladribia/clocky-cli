@@ -7,10 +7,15 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 ## Features
 
 - **Start a timer** with fuzzy project search — handles typos and partial names
-- **Stop** the currently running timer
+- **Stop** the currently running timer (with safety prompt for long-running timers)
 - **Status** — see what's running and for how long
 - **List** recent time entries in a formatted table
-- **Browse projects** for a client (with optional fuzzy search)
+- **Delete** a time entry by ID (with confirmation)
+- **Browse projects** for a client or list all projects
+- **`--json` output** for scripting and piping to `jq`
+- **`--quiet` mode** to suppress informational output
+- **`--dry-run`** to preview `start` without creating a timer
+- **`NO_COLOR`** env variable respected
 - **Ubuntu launchers** — bind `Super+C` / `Super+X` to start/stop timers via a GUI dialog
 - No local data persistence — only your API key is stored (in `.env`)
 
@@ -26,7 +31,7 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 
 ## Installation
 
-> Version: **v1.1.0**
+> Version: **v2.0.0**
 
 ### 1. Clone the repository
 
@@ -78,140 +83,135 @@ CLOCKIFY_API_KEY=your_api_key_here
 #### Option B: local development install
 
 ```bash
-# Create the venv and install all dependencies
 uv sync
-
-# Run from the project
 uv run clocky --help
-```
-
-### 5. Shell completion (optional but recommended)
-
-Clocky uses [Typer](https://typer.tiangolo.com/) which provides native completion
-for **bash**, **zsh**, and **fish**.
-
-#### One-command install (auto-detects your shell)
-
-```bash
-uv run clocky --install-completion
-```
-
-Then restart your shell or source the relevant file:
-
-```bash
-# bash
-source ~/.bashrc
-
-# zsh
-source ~/.zshrc
-
-# fish
-source ~/.config/fish/config.fish
-```
-
-#### Manual setup — bash
-
-```bash
-# Generate the script and append to .bashrc
-uv run clocky --show-completion >> ~/.bashrc
-source ~/.bashrc
-```
-
-#### Manual setup — zsh
-
-```bash
-uv run clocky --show-completion >> ~/.zshrc
-source ~/.zshrc
-```
-
-#### Manual setup — fish
-
-```bash
-uv run clocky --show-completion > ~/.config/fish/completions/clocky.fish
-```
-
-#### Verify completion is working
-
-```bash
-clocky <TAB>          # shows: start  stop  status  list  projects
-clocky start --<TAB>  # shows: --description  --tag  --no-auto-tag
 ```
 
 ### 4. Manual global install (alternative)
 
 ```bash
-# Install globally
 uv tool install .
-
-# Run setup
 clocky setup
-
-# Install completion
 clocky --install-completion
 ```
 
-After install, `clocky` works from any directory:
+### 5. Shell completion (optional but recommended)
 
 ```bash
-clocky --help
+uv run clocky --install-completion
 ```
+
+Then restart your shell or source the relevant file (`~/.bashrc`, `~/.zshrc`, etc.).
 
 ---
 
 ## Usage
 
+### Global flags
+
+These flags work with any command:
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Output JSON to stdout (implies `--quiet`) |
+| `--quiet` / `-q` | Suppress informational output |
+| `--version` / `-V` | Show version and exit |
+| `--help` | Show help |
+
 ### Start a timer
 
 ```bash
-# Start with fuzzy project search (interactive pick list if multiple matches)
-# Tags are auto-inferred from your recent entries for this project!
+# Fuzzy project search (interactive pick list if multiple matches)
 clocky start "web redesin"
 
 # With a description
 clocky start "mobile app" --description "Sprint planning"
 
-# With explicit tags (overrides auto-tag)
+# With explicit tags
 clocky start "mobile" --tag "billable" --tag "meeting"
 
 # Disable auto-tag inference
 clocky start "mobile" --no-auto-tag
 
-# Non-interactive mode (best match only; no prompts)
-# Useful for scripts and launchers.
+# Non-interactive (best match, no prompts — for scripts/launchers)
 clocky start --non-interactive "cros-selling"
+
+# Preview without starting
+clocky start --dry-run "mobile app"
+
+# JSON output
+clocky --json start "mobile" --non-interactive
 ```
 
 ### Stop the running timer
 
 ```bash
 clocky stop
+
+# Skip confirmation on long-running timers (>8h)
+clocky stop --force
 ```
 
 ### Check current timer status
 
 ```bash
 clocky status
+clocky --json status
 ```
 
 ### List recent time entries
 
 ```bash
-# Default: last 10 entries
 clocky list
-
-# Custom limit
 clocky list --limit 25
+clocky --json list | jq '.[].project_name'
 ```
 
 ### Browse projects
 
 ```bash
-# List projects for a client (fuzzy client match)
+# List all projects
+clocky projects
+
+# Filter by client (fuzzy)
 clocky projects "Dribia"
 
-# Filter projects by name within that client
+# Filter by client + project name
 clocky projects "Dribia" --search "pipeline"
+
+# JSON output
+clocky --json projects
 ```
+
+### Delete a time entry
+
+```bash
+# Interactive confirmation
+clocky delete entry-abc123
+
+# Skip confirmation
+clocky delete entry-abc123 --force
+```
+
+### Manage project→tag mapping
+
+```bash
+clocky tag-map show
+clocky tag-map edit
+clocky tag-map pick
+clocky tag-map set <project-id> <tag-id>
+clocky tag-map remove <project-id>
+```
+
+---
+
+## Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Runtime error (API failure, no timer running, etc.) |
+| 2 | Usage error (no fuzzy match found, bad input) |
 
 ---
 
@@ -233,43 +233,23 @@ The auto-tag feature uses (in order):
 1. A persisted 1:1 **project→tag mapping** (recommended)
 2. Your last 50 entries for the project (history-based inference)
 
-If neither is available:
-- In a terminal: clocky prompts you for a tag (fuzzy), then saves the mapping.
-- In a launcher (.desktop): the launcher prompts you for a tag (free text + confirmation), then clocky saves the mapping.
-
-You can view/edit the mapping:
-
-```bash
-clocky tag-map show
-clocky tag-map edit
-clocky tag-map pick
-```
-
-This matches the typical Dribia workflow where each project usually maps to one tag (e.g., "Cross-selling" → "Comercial").
-
 ### Setup
 
-The `./install.sh` script handles this automatically, but you can also set it up manually:
-
-#### 1. Install launchers
+The `./install.sh` script handles this automatically, or manually:
 
 ```bash
 mkdir -p ~/.local/share/clocky
-cp launchers/clocky-launcher.sh ~/.local/share/clocky/
-cp launchers/clocky-stop.sh ~/.local/share/clocky/
+cp launchers/clocky-launcher.sh launchers/clocky-stop.sh ~/.local/share/clocky/
+cp launchers/lib.sh ~/.local/share/clocky/
 chmod +x ~/.local/share/clocky/*.sh
 ```
 
-#### 2. Register keyboard shortcuts in Ubuntu
-
-Go to **Settings → Keyboard → Keyboard Shortcuts → Custom Shortcuts** and add:
+Then add keyboard shortcuts in **Settings → Keyboard → Custom Shortcuts**:
 
 | Name | Command | Shortcut |
-|---|---|---|
+|------|---------|----------|
 | Clocky Start Timer | `~/.local/share/clocky/clocky-launcher.sh` | `Super+C` |
 | Clocky Stop Timer | `~/.local/share/clocky/clocky-stop.sh` | `Super+X` |
-
-Now you can press **Super+C** from anywhere to start a timer!
 
 ---
 
@@ -278,50 +258,39 @@ Now you can press **Super+C** from anywhere to start a timer!
 ```
 clocky-cli/
 ├── clocky/
-│   ├── __init__.py
-│   ├── api.py          # ClockifyAPI + MockClockifyAPI
-│   ├── cli.py          # Typer CLI commands
-│   ├── config.py       # Settings via pydantic-settings + .env
-│   ├── context.py      # AppContext (user + workspace resolution)
-│   ├── display.py      # Rich-based terminal output helpers
-│   ├── fuzzy.py        # rapidfuzz search utilities
-│   └── models.py       # Pydantic data models
-├── launchers/
-│   ├── clocky-launcher.sh       # Start timer launcher (zenity)
-│   ├── clocky-stop.sh           # Stop timer launcher
-│   ├── clocky-start-timer.desktop
-│   └── clocky-stop-timer.desktop
-├── tests/
-│   ├── test_api_mock.py
-│   ├── test_fuzzy.py
-│   └── test_models.py
-├── .env.example
-├── .gitignore
-├── check.sh            # Postprocessing: format → lint → typecheck → test
+│   ├── api.py           # ClockifyAPI HTTP client
+│   ├── cli.py           # Typer CLI commands
+│   ├── cli_tag_map.py   # Tag-map subcommands
+│   ├── config.py        # Settings via pydantic-settings + .env
+│   ├── context.py       # AppContext (user + workspace resolution)
+│   ├── display.py       # Rich-based terminal output
+│   ├── fuzzy.py         # rapidfuzz search utilities
+│   ├── models.py        # Pydantic data models
+│   ├── output.py        # JSON output and mode state
+│   ├── setup.py         # Interactive setup wizard
+│   ├── tag_map.py       # Persistent project→tag mapping
+│   └── testing.py       # Mock API for offline tests
+├── launchers/           # Ubuntu .desktop files and shell scripts
+├── tests/               # pytest test suite
+├── check.sh             # Format → lint → typecheck → test
+├── install.sh           # One-step global installer
 ├── pyproject.toml
-├── README.md
-├── SYSTEM.md
-└── AGENTS.md
+├── AGENTS.md            # Agent/AI workflow instructions
+└── README.md
 ```
 
 ---
 
 ## Development
 
-Run the full check suite after every change:
-
 ```bash
 ./check.sh
 ```
 
-This runs in order:
-1. `ruff format .` — auto-format
-2. `ruff check . --fix` — lint + auto-fix
-3. `ty check .` — static type checking
-4. `pytest` — full test suite
+Runs: `ruff format .` → `ruff check . --fix` → `ty check .` → `pytest`
 
 ---
 
 ## Authentication
 
-All API calls use the `X-Api-Key` header. Your key is read from the `CLOCKIFY_API_KEY` environment variable (or `.env` file). It is **never** stored anywhere else or logged.
+All API calls use the `X-Api-Key` header. Your key is read from `CLOCKIFY_API_KEY` (environment variable or `.env`). It is never stored anywhere else or logged.
