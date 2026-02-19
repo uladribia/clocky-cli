@@ -81,6 +81,6 @@ def test_projects_for_client_filters(
     runner: CliRunner, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(cli, "build_context", lambda: ctx)
-    result = runner.invoke(cli.app, ["projects", "Acme", "--search", "Alpha"])
+    result = runner.invoke(cli.app, ["projects", "Acme", "--search", "Mobile"])
     assert result.exit_code == 0
     assert "Projects" in result.output

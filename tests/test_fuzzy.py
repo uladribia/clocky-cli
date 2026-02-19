@@ -36,6 +36,11 @@ class TestFuzzySearch:
         scores = [s for _, s in results]
         assert scores == sorted(scores, reverse=True)
 
+    def test_reordered_words_match(self) -> None:
+        results = fuzzy_search("Pipeline Data", MOCK_PROJECTS, lambda p: p.name)
+        names = [p.name for p, _ in results]
+        assert "Data Pipeline" in names
+
     def test_limit_respected(self) -> None:
         results = fuzzy_search("a", MOCK_PROJECTS, lambda p: p.name, limit=2)
         assert len(results) <= 2
