@@ -89,7 +89,7 @@ def setup() -> None:
     console.print("\n[bold green]Setup complete![/bold green]")
     console.print("You can now use [bold]clocky[/bold] from anywhere.\n")
     console.print("  [dim]clocky status[/dim]      — check running timer")
-    console.print("  [dim]clocky start -p X[/dim]  — start timer on project X")
+    console.print("  [dim]clocky start <project>[/dim] — start timer on a project")
     console.print("  [dim]clocky stop[/dim]        — stop timer")
     console.print("  [dim]clocky --help[/dim]      — see all commands\n")
 

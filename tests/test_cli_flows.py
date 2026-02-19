@@ -68,9 +68,13 @@ def test_list_shows_table(
     assert "Recent Time Entries" in result.output
 
 
-def test_projects_requires_client_arg(runner: CliRunner) -> None:
+def test_projects_without_client_lists_all(
+    runner: CliRunner, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli, "build_context", lambda: ctx)
     result = runner.invoke(cli.app, ["projects"])
-    assert result.exit_code != 0
+    assert result.exit_code == 0
+    assert "Projects" in result.output
 
 
 def test_projects_for_client_filters(

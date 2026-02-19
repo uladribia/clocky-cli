@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 
 from rich import box
@@ -14,8 +15,9 @@ from rich.table import Table
 
 from clocky.models import Project, TimeEntry
 
-console = Console()
-err_console = Console(stderr=True)
+_no_color = bool(os.environ.get("NO_COLOR"))
+console = Console(no_color=_no_color)
+err_console = Console(stderr=True, no_color=_no_color)
 
 
 def format_duration(delta: timedelta) -> str:
