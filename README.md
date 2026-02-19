@@ -31,7 +31,7 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 
 ## Installation
 
-> Version: **v2.0.0**
+> Version: **v2.1.0**
 
 ### 1. Clone the repository
 
