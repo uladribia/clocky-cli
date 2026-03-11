@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class _AliasModel(BaseModel):
@@ -68,7 +68,13 @@ class TimeEntry(_AliasModel):
     workspace_id: str = Field(alias="workspaceId")
     user_id: str = Field(alias="userId")
     time_interval: TimeInterval = Field(alias="timeInterval")
-    tag_ids: list[str] = Field(default_factory=list, alias="tagIds")
+    tag_ids: list[str] = Field(default_factory=list, alias="tagIds", validate_default=True)
+
+    @field_validator("tag_ids", mode="before")
+    @classmethod
+    def _coerce_tag_ids(cls, v: object) -> object:
+        """Clockify may return ``null`` for tagIds; coerce to empty list."""
+        return v if v is not None else []
 
 
 class Tag(_AliasModel):
