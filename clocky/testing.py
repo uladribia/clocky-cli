@@ -129,15 +129,27 @@ MOCK_TIME_ENTRIES = [
 class MockClockifyAPI(ClockifyAPI):
     """Offline mock of ClockifyAPI for testing. Returns fixture data, no network calls."""
 
-    def __init__(self, running_timer: TimeEntry | None = None) -> None:
+    def __init__(
+        self,
+        running_timer: TimeEntry | None = None,
+        projects: list[Project] | None = None,
+        tags: list[Tag] | None = None,
+        clients: list[Client] | None = None,
+    ) -> None:
         """Create mock API.
 
         Args:
             running_timer: Optional TimeEntry to return as the active timer.
+            projects: Custom list of projects for this mock instance.
+            tags: Custom list of tags for this mock instance.
+            clients: Custom list of clients for this mock instance.
 
         """
         # Skip parent __init__ — no HTTP client needed
         self._running_timer = running_timer
+        self._projects = projects if projects is not None else MOCK_PROJECTS
+        self._tags = tags if tags is not None else MOCK_TAGS
+        self._clients = clients if clients is not None else MOCK_CLIENTS
 
     def get_user(self) -> User:
         """Return mock user."""
@@ -150,17 +162,17 @@ class MockClockifyAPI(ClockifyAPI):
     def get_projects(self, workspace_id: str) -> list[Project]:
         """Return mock projects."""
         del workspace_id  # unused
-        return MOCK_PROJECTS
+        return self._projects
 
     def get_clients(self, workspace_id: str) -> list[Client]:
         """Return mock clients."""
         del workspace_id  # unused
-        return MOCK_CLIENTS
+        return self._clients
 
     def get_tags(self, workspace_id: str) -> list[Tag]:
         """Return mock tags."""
         del workspace_id  # unused
-        return MOCK_TAGS
+        return self._tags
 
     def get_time_entries(
         self,

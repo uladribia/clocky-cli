@@ -15,6 +15,7 @@ clocky projects            # list projects
 clocky delete <id>         # delete entry
 clocky tag-map show        # view tag mappings
 clocky setup               # configure API key
+clocky integration-test    # real integration smoke tests
 ```
 
 ## Global flags
@@ -91,6 +92,17 @@ See [tag-map.md](tag-map.md) for full details.
 ### `setup`
 
 Run interactive setup to configure your API key. See [install.md](install.md).
+
+### `integration-test`
+
+Run real integration smoke tests against Clockify.
+
+| Option | Description |
+|--------|-------------|
+| `--case` | Case to run (repeatable). Defaults to all cases. |
+| `--history-limit` | Number of recent entries to inspect for project selection. |
+
+See [integration-tests.md](integration-tests.md) for full details.
 
 ## Exit codes
 

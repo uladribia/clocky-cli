@@ -1,5 +1,5 @@
 ---
-description: Documentation index for clocky-cli v2.1.0.
+description: Documentation index for clocky-cli v2.2.0.
 ---
 
 # clocky-cli Documentation
@@ -19,6 +19,7 @@ clocky is a CLI for [Clockify](https://clockify.me) with fuzzy search, auto-tagg
 | [tag-map.md](tag-map.md) | How to manage project→tag mappings |
 | [launchers.md](launchers.md) | Ubuntu desktop launchers and keyboard shortcuts |
 | [architecture.md](architecture.md) | Code structure and module responsibilities |
+| [integration-tests.md](integration-tests.md) | Real integration smoke tests |
 | [troubleshooting.md](troubleshooting.md) | Common errors and fixes |
 
 ## Related files

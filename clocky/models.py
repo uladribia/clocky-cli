@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class _AliasModel(BaseModel):
@@ -69,6 +69,24 @@ class TimeEntry(_AliasModel):
     user_id: str = Field(alias="userId")
     time_interval: TimeInterval = Field(alias="timeInterval")
     tag_ids: list[str] = Field(default_factory=list, alias="tagIds")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_null_fields(cls, data: object) -> object:
+        """Clockify API may return null for tagIds; coerce to empty list.
+
+        This model_validator runs before field validation and ensures that
+        any null values in the input data are converted to their defaults,
+        preventing Pydantic validation errors.
+        """
+        if not isinstance(data, dict):
+            return data
+        # Clockify API returns null for tagIds on some entries
+        raw_tag_ids = data.get("tagIds")  # type: ignore[union-attr]
+        if raw_tag_ids is None:
+            data = dict(data)
+            data["tagIds"] = []
+        return data
 
 
 class Tag(_AliasModel):

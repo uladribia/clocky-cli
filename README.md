@@ -31,7 +31,7 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 
 ## Installation
 
-> Version: **v2.1.0**
+> Version: **v2.2.0**
 
 ### 1. Clone the repository
 
@@ -288,6 +288,16 @@ clocky-cli/
 ```
 
 Runs: `ruff format .` → `ruff check . --fix` → `ty check .` → `pytest`
+
+### Integration smoke tests
+
+```bash
+clocky integration-test
+```
+
+```bash
+uv run python scripts/integration_smoke.py
+```
 
 ---
 

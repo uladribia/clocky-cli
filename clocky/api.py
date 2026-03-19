@@ -25,6 +25,10 @@ from clocky.models import (
 BASE_URL = "https://api.clockify.me/api/v1"
 
 
+class ClockifyAPIError(Exception):
+    """Raised when the Clockify API returns an error response."""
+
+
 class ClockifyAPI:
     """HTTP client for the Clockify REST API.
 
@@ -123,12 +127,26 @@ class ClockifyAPI:
         return TimeEntry.model_validate(entries[0]) if entries else None
 
     def start_timer(self, workspace_id: str, request: StartTimerRequest) -> TimeEntry:
-        """Start a new time entry."""
+        """Start a new time entry.
+
+        Raises:
+            ClockifyAPIError: If the API rejects the request (e.g. 400 Bad Request).
+
+        """
         r = self._client.post(
             f"/workspaces/{workspace_id}/time-entries",
             json=request.to_api_dict(),
         )
-        r.raise_for_status()
+        if r.status_code >= 400:
+            detail = ""
+            try:
+                body = r.json()
+                detail = body.get("message", "") or body.get("error", "")
+            except Exception:  # noqa: BLE001
+                detail = r.text[:200] if r.text else ""
+            raise ClockifyAPIError(
+                f"Failed to start timer (HTTP {r.status_code}): {detail or r.reason_phrase}"
+            )
         return TimeEntry.model_validate(r.json())
 
     def stop_timer(

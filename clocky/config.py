@@ -12,18 +12,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
-from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm
 
-# Re-exported so that existing callers (including tests) can import from here.
+import clocky.console as console_module
 from clocky.browser import CLOCKIFY_API_KEY_URL
 from clocky.browser import open_browser as _open_browser
 
 __all__ = ["CLOCKIFY_API_KEY_URL", "_open_browser", "Settings", "load_settings"]
-
-_console = Console()
-_err_console = Console(stderr=True)
 
 
 def _find_env_file() -> Path:
@@ -59,11 +55,11 @@ def _find_env_file() -> Path:
 
 def _prompt_open_browser() -> None:
     """Offer to open the Clockify API key page."""
-    _console.print(f"\n  [bold cyan]Direct link:[/bold cyan] {CLOCKIFY_API_KEY_URL}")
+    console_module.console.print(f"\n  [bold cyan]Direct link:[/bold cyan] {CLOCKIFY_API_KEY_URL}")
     try:
         if Confirm.ask("\n  Open in browser?", default=True):
             _open_browser(CLOCKIFY_API_KEY_URL)
-            _console.print("  [dim]Browser opened.[/dim]")
+            console_module.console.print("  [dim]Browser opened.[/dim]")
     except (KeyboardInterrupt, EOFError):
         pass  # Non-interactive
 
@@ -92,10 +88,10 @@ def _show_setup_guide(env_path: Path, *, file_exists: bool) -> None:
             "  4. Generate or copy your key and update the file"
         )
 
-    _err_console.print()
-    _err_console.print(Panel(body, title=title, border_style="red", padding=(1, 2)))
+    console_module.err_console.print()
+    console_module.err_console.print(Panel(body, title=title, border_style="red", padding=(1, 2)))
     _prompt_open_browser()
-    _err_console.print()
+    console_module.err_console.print()
 
 
 class Settings(BaseSettings):
