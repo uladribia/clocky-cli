@@ -6,7 +6,8 @@ description: Run the real integration smoke tests against Clockify.
 
 Use the integration smoke test script to validate real CLI behavior against your
 Clockify account. The script is fully non-interactive and selects the most
-recent projects that satisfy each case.
+recent projects that satisfy each case. The `start_stop` case cleans up after
+itself by deleting the created time entry.
 
 ## TL;DR
 

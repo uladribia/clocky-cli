@@ -15,9 +15,9 @@ from pydantic_settings import BaseSettings
 from rich.panel import Panel
 from rich.prompt import Confirm
 
+import clocky.console as console_module
 from clocky.browser import CLOCKIFY_API_KEY_URL
 from clocky.browser import open_browser as _open_browser
-from clocky.console import console, err_console
 
 __all__ = ["CLOCKIFY_API_KEY_URL", "_open_browser", "Settings", "load_settings"]
 
@@ -55,11 +55,11 @@ def _find_env_file() -> Path:
 
 def _prompt_open_browser() -> None:
     """Offer to open the Clockify API key page."""
-    console.print(f"\n  [bold cyan]Direct link:[/bold cyan] {CLOCKIFY_API_KEY_URL}")
+    console_module.console.print(f"\n  [bold cyan]Direct link:[/bold cyan] {CLOCKIFY_API_KEY_URL}")
     try:
         if Confirm.ask("\n  Open in browser?", default=True):
             _open_browser(CLOCKIFY_API_KEY_URL)
-            console.print("  [dim]Browser opened.[/dim]")
+            console_module.console.print("  [dim]Browser opened.[/dim]")
     except (KeyboardInterrupt, EOFError):
         pass  # Non-interactive
 
@@ -88,10 +88,10 @@ def _show_setup_guide(env_path: Path, *, file_exists: bool) -> None:
             "  4. Generate or copy your key and update the file"
         )
 
-    err_console.print()
-    err_console.print(Panel(body, title=title, border_style="red", padding=(1, 2)))
+    console_module.err_console.print()
+    console_module.err_console.print(Panel(body, title=title, border_style="red", padding=(1, 2)))
     _prompt_open_browser()
-    err_console.print()
+    console_module.err_console.print()
 
 
 class Settings(BaseSettings):

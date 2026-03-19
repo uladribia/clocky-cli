@@ -192,12 +192,14 @@ def assert_contains(text: str, needle: str, case: str) -> None:
 
 
 def case_start_stop(project_name: str) -> CaseResult:
-    """Run start/status/stop smoke test."""
+    """Run start/status/stop smoke test with cleanup."""
     timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     description = f"[ITEST] start-stop {timestamp}"
+    cleanup_errors: list[str] = []
 
     start_proc = run_cli(
         [
+            "--json",
             "start",
             "--non-interactive",
             project_name,
@@ -212,15 +214,34 @@ def case_start_stop(project_name: str) -> CaseResult:
             details=f"start failed: {start_proc.stderr.strip()}",
         )
 
+    try:
+        start_payload = json.loads(start_proc.stdout)
+        entry_id = start_payload.get("id")
+        if not entry_id:
+            raise ValueError("Missing entry id")
+    except (json.JSONDecodeError, ValueError) as exc:
+        return CaseResult(name="start_stop", success=False, details=f"start JSON: {exc}")
+
     status_proc = run_cli(["status"])
     stop_proc = run_cli(["stop", "--force"])
 
+    delete_proc = run_cli(["delete", entry_id, "--force"])
+    if delete_proc.returncode != 0:
+        cleanup_errors.append(delete_proc.stderr.strip() or "delete failed")
+
     try:
-        assert_contains(start_proc.stdout, "Timer started", "start_stop")
         assert_contains(status_proc.stdout, "Timer running", "start_stop")
         assert_contains(stop_proc.stdout, "Timer stopped", "start_stop")
     except AssertionError as exc:
-        return CaseResult(name="start_stop", success=False, details=str(exc))
+        cleanup_note = f"; cleanup: {', '.join(cleanup_errors)}" if cleanup_errors else ""
+        return CaseResult(name="start_stop", success=False, details=f"{exc}{cleanup_note}")
+
+    if cleanup_errors:
+        return CaseResult(
+            name="start_stop",
+            success=False,
+            details=f"cleanup failed: {', '.join(cleanup_errors)}",
+        )
 
     return CaseResult(name="start_stop", success=True)
 
