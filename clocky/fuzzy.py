@@ -13,6 +13,7 @@ from rapidfuzz import fuzz, process
 
 DEFAULT_CUTOFF = 40
 DEFAULT_LIMIT = 10
+FUZZY_NON_INTERACTIVE_THRESHOLD = 100.0  # Require 100% match in non-interactive mode
 
 
 def fuzzy_search[T](

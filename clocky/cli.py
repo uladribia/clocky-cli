@@ -8,16 +8,16 @@ from __future__ import annotations
 
 import os
 import sys
-from collections import Counter
 from datetime import UTC, datetime
 from importlib.metadata import version as _pkg_version
 from typing import Annotated
 
-import questionary
 import typer
-from rich.console import Console
 
-from clocky.api import ClockifyAPI
+from clocky.api import ClockifyAPIError
+from clocky.cli_helpers.selection import pick_one
+from clocky.cli_helpers.tagging import resolve_tag_ids
+from clocky.console import console
 from clocky.context import build_context
 from clocky.display import (
     print_error,
@@ -28,10 +28,11 @@ from clocky.display import (
     print_time_entries,
     print_timer_stopped,
 )
-from clocky.fuzzy import fuzzy_choices, fuzzy_search
-from clocky.models import StartTimerRequest, StopTimerRequest, Tag
+from clocky.fuzzy import fuzzy_search
+from clocky.integration_smoke import DEFAULT_CASES, DEFAULT_HISTORY_LIMIT, run_integration_smoke
+from clocky.lookup import build_project_map, build_tag_map, resolve_project_name, resolve_tag_names
+from clocky.models import StartTimerRequest, StopTimerRequest
 from clocky.output import emit_json, get_mode, set_mode, time_entry_to_dict
-from clocky.tag_map import TagMap
 
 app = typer.Typer(
     name="clocky",
@@ -77,10 +78,6 @@ def _main_options(
 
 # Subcommands are registered below (see clocky.cli_tag_map).
 
-_no_color = bool(os.environ.get("NO_COLOR"))
-console = Console(no_color=_no_color)
-
-
 # -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
@@ -89,176 +86,6 @@ console = Console(no_color=_no_color)
 def _now_utc() -> str:
     """Return current UTC time as ISO string."""
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _pick_one[T](
-    matches: list[tuple[T, float]],
-    attr: str,
-    *,
-    non_interactive: bool = False,
-) -> T | None:
-    """Select one item from fuzzy matches.
-
-    Rules:
-    - If there is only one match: return it.
-    - If non-interactive: return best match.
-    - If stdin is not a TTY (e.g. .desktop launch): return best match.
-    - Otherwise: prompt user to pick.
-    """
-    if len(matches) == 1:
-        return matches[0][0]
-
-    if non_interactive or not sys.stdin.isatty():
-        return matches[0][0]
-
-    choices = fuzzy_choices(matches, attr)
-    choices.append(questionary.Choice("[Cancel]", value=None))
-    return questionary.select("Pick one:", choices=choices).ask()
-
-
-def _infer_tag_for_project(
-    api: ClockifyAPI,
-    workspace_id: str,
-    user_id: str,
-    project_id: str,
-) -> str | None:
-    """Infer the most likely tag for a project based on recent entries.
-
-    Looks at the last 50 entries for this project and returns the most
-    commonly used tag ID, if any.
-
-    Args:
-        api: Clockify API client.
-        workspace_id: Active workspace ID.
-        user_id: Active user ID.
-        project_id: Project to infer a tag for.
-
-    Returns:
-        The most commonly used tag ID, or None if no data exists.
-
-    """
-    entries = api.get_time_entries(workspace_id, user_id, limit=50)
-
-    tag_counts: Counter[str] = Counter()
-    for entry in entries:
-        if entry.project_id == project_id and entry.tag_ids:
-            for tag_id in entry.tag_ids:
-                tag_counts[tag_id] += 1
-
-    if not tag_counts:
-        return None
-
-    most_common_tag_id, _count = tag_counts.most_common(1)[0]
-    return most_common_tag_id
-
-
-def _resolve_tag_ids(
-    api: ClockifyAPI,
-    workspace_id: str,
-    user_id: str,
-    project_id: str,
-    project_name: str,
-    tags: list[str] | None,
-    all_tags: list[Tag],
-    *,
-    auto_tag: bool,
-    non_interactive: bool,
-) -> list[str]:
-    """Resolve tag IDs from explicit tags, stored mapping, history, or prompt.
-
-    Priority: explicit ``--tag`` flags → stored project→tag mapping →
-    history-based inference → interactive prompt.
-
-    Args:
-        api: Clockify API client.
-        workspace_id: Active workspace ID.
-        user_id: Active user ID.
-        project_id: ID of the chosen project.
-        project_name: Display name of the chosen project.
-        tags: Explicit tag name(s) from ``--tag`` option, or ``None``.
-        all_tags: All available tags in the workspace.
-        auto_tag: Whether to infer a tag from recent history.
-        non_interactive: Whether to suppress interactive prompts.
-
-    Returns:
-        List of resolved tag IDs (may be empty).
-
-    Raises:
-        typer.Exit: With code 1 when ``non_interactive`` is True and no tag
-            mapping exists. Prints ``CLOCKY_ERROR_MISSING_TAG_MAP`` to
-            stderr as a launcher-readable sentinel before exiting.
-
-    """
-    mode = get_mode()
-    tags_by_id = {t.id: t for t in all_tags}
-    tag_ids: list[str] = []
-
-    if tags is not None:
-        # Explicit tags: fuzzy-resolve each one and persist a 1:1 mapping when
-        # exactly one tag is provided.
-        for t in tags:
-            tag_matches = fuzzy_search(t, all_tags, key=lambda tag: tag.name)
-            if not tag_matches:
-                print_error(f"Tag '{t}' not found, skipping")
-                continue
-            chosen_tag = _pick_one(tag_matches, "name", non_interactive=non_interactive)
-            if chosen_tag:
-                tag_ids.append(chosen_tag.id)
-                if not mode.quiet:
-                    console.print(
-                        f"[dim]Tag (explicit):[/dim] [magenta]{chosen_tag.name}[/magenta]"
-                    )
-
-        if len(tag_ids) == 1:
-            TagMap.load().set(project_id, tag_ids[0]).save()
-
-    else:
-        # No tags provided: stored mapping → history inference → interactive prompt
-        tag_map = TagMap.load()
-        mapped = tag_map.get(project_id)
-
-        if mapped and mapped in tags_by_id:
-            tag_ids.append(mapped)
-            if not mode.quiet:
-                console.print(
-                    f"[dim]Tag (mapped):[/dim] [magenta]{tags_by_id[mapped].name}[/magenta]"
-                )
-
-        elif auto_tag:
-            inferred = _infer_tag_for_project(api, workspace_id, user_id, project_id)
-            if inferred and inferred in tags_by_id:
-                tag_ids.append(inferred)
-                if not mode.quiet:
-                    console.print(
-                        f"[dim]Tag (auto):[/dim] [magenta]{tags_by_id[inferred].name}[/magenta]"
-                    )
-                tag_map.set(project_id, inferred).save()
-
-        if not tag_ids and sys.stdin.isatty():
-            console.print(f"\nNo tag found for project [cyan]{project_name}[/cyan].")
-            tag_query = typer.prompt("Tag (fuzzy)").strip()
-            if tag_query:
-                tag_matches = fuzzy_search(tag_query, all_tags, key=lambda tag: tag.name)
-                if tag_matches:
-                    chosen_tag = _pick_one(tag_matches, "name", non_interactive=non_interactive)
-                    if chosen_tag:
-                        tag_ids.append(chosen_tag.id)
-                        tag_map.set(project_id, chosen_tag.id).save()
-                        if not mode.quiet:
-                            console.print(
-                                f"[dim]Tag (chosen):[/dim] [magenta]{chosen_tag.name}[/magenta]"
-                            )
-
-        if not tag_ids and non_interactive:
-            # Launcher-friendly sentinel for GUI scripts.
-            Console(stderr=True).print("CLOCKY_ERROR_MISSING_TAG_MAP")
-            print_error(
-                f"No tag mapping found for '{project_name}'. Provide --tag once to set it, "
-                "or let the launcher prompt you."
-            )
-            raise typer.Exit(1)
-
-    return tag_ids
 
 
 # -----------------------------------------------------------------------------
@@ -272,6 +99,44 @@ def setup() -> None:
     from clocky.setup import setup as run_setup
 
     run_setup()
+
+
+@app.command("integration-test")
+def integration_test(
+    case: Annotated[
+        list[str] | None,
+        typer.Option("--case", help="Case to run (repeatable)."),
+    ] = None,
+    history_limit: Annotated[
+        int,
+        typer.Option(
+            "--history-limit",
+            help="Number of recent time entries to inspect for project selection.",
+        ),
+    ] = DEFAULT_HISTORY_LIMIT,
+) -> None:
+    """Run real integration smoke tests against Clockify."""
+    cases = case or list(DEFAULT_CASES)
+    unknown = [name for name in cases if name not in DEFAULT_CASES]
+    if unknown:
+        raise typer.BadParameter(f"Unknown case(s): {', '.join(unknown)}")
+
+    if "CLOCKY_INTEGRATION_CLI" not in os.environ:
+        argv0 = sys.argv[0]
+        if os.path.basename(argv0) in {"clocky", "clocky.exe"}:
+            os.environ["CLOCKY_INTEGRATION_CLI"] = argv0
+        else:
+            os.environ["CLOCKY_INTEGRATION_CLI"] = (
+                f'{sys.executable} -c "from clocky.cli import main; main()"'
+            )
+
+    try:
+        exit_code = run_integration_smoke(cases, history_limit)
+    except RuntimeError as exc:
+        print_error(f"clocky: {exc}")
+        raise typer.Exit(1) from None
+
+    raise typer.Exit(exit_code)
 
 
 @app.command()
@@ -290,12 +155,12 @@ def status() -> None:
 
     project_name = None
     if entry.project_id:
-        projects = {p.id: p.name for p in ctx.api.get_projects(ctx.workspace_id)}
-        project_name = projects.get(entry.project_id)
+        project_map = build_project_map(ctx.api, ctx.workspace_id)
+        project_name = resolve_project_name(project_map, entry.project_id)
 
     if mode.json:
-        tag_map = {t.id: t.name for t in ctx.api.get_tags(ctx.workspace_id)}
-        tag_names = [tag_map.get(tid, tid) for tid in entry.tag_ids]
+        tag_map = build_tag_map(ctx.api, ctx.workspace_id)
+        tag_names = resolve_tag_names(tag_map, entry.tag_ids)
         emit_json(time_entry_to_dict(entry, project_name=project_name, tag_names=tag_names))
         return
 
@@ -331,7 +196,7 @@ def start(
     if not matches:
         print_error(f"clocky: No projects matching '{project}'")
         raise typer.Exit(2)
-    chosen = _pick_one(matches, "name", non_interactive=non_interactive)
+    chosen = pick_one(matches, "name", non_interactive=non_interactive)
     if not chosen:
         raise typer.Exit(0)
 
@@ -339,7 +204,7 @@ def start(
         console.print(f"[dim]Project:[/dim] [cyan]{chosen.name}[/cyan]")
 
     all_tags = ctx.api.get_tags(ctx.workspace_id)
-    tag_ids = _resolve_tag_ids(
+    tag_ids = resolve_tag_ids(
         ctx.api,
         ctx.workspace_id,
         ctx.user.id,
@@ -352,7 +217,7 @@ def start(
     )
 
     tag_map = {t.id: t.name for t in all_tags}
-    tag_names = [tag_map.get(tid, tid) for tid in tag_ids]
+    tag_names = resolve_tag_names(tag_map, tag_ids)
 
     if dry_run:
         result = {
@@ -373,13 +238,24 @@ def start(
             console.print(f"  Tags:        [magenta]{tags_str}[/magenta]\n")
         return
 
+    # Stop any running timer before starting a new one.
+    running = ctx.api.get_running_timer(ctx.workspace_id, ctx.user.id)
+    if running:
+        ctx.api.stop_timer(ctx.workspace_id, ctx.user.id, StopTimerRequest(end=_now_utc()))
+        if not mode.quiet:
+            console.print("[dim]Stopped previous timer.[/dim]")
+
     request = StartTimerRequest(
         start=_now_utc(),
         description=description,
         project_id=chosen.id,
         tag_ids=tag_ids,
     )
-    entry = ctx.api.start_timer(ctx.workspace_id, request)
+    try:
+        entry = ctx.api.start_timer(ctx.workspace_id, request)
+    except ClockifyAPIError as exc:
+        print_error(f"clocky: {exc}")
+        raise typer.Exit(1) from None
 
     if mode.json:
         emit_json(time_entry_to_dict(entry, project_name=chosen.name, tag_names=tag_names))
@@ -426,10 +302,10 @@ def stop(
     if mode.json:
         project_name = None
         if entry.project_id:
-            projects_map = {p.id: p.name for p in ctx.api.get_projects(ctx.workspace_id)}
-            project_name = projects_map.get(entry.project_id)
-        tag_map = {t.id: t.name for t in ctx.api.get_tags(ctx.workspace_id)}
-        tag_names = [tag_map.get(tid, tid) for tid in entry.tag_ids]
+            project_map = build_project_map(ctx.api, ctx.workspace_id)
+            project_name = resolve_project_name(project_map, entry.project_id)
+        tag_map = build_tag_map(ctx.api, ctx.workspace_id)
+        tag_names = resolve_tag_names(tag_map, entry.tag_ids)
         emit_json(time_entry_to_dict(entry, project_name=project_name, tag_names=tag_names))
         return
 
@@ -444,15 +320,15 @@ def list_entries(
     mode = get_mode()
     ctx = build_context()
     entries = ctx.api.get_time_entries(ctx.workspace_id, ctx.user.id, limit=limit)
-    project_map = {p.id: p.name for p in ctx.api.get_projects(ctx.workspace_id)}
-    tag_map = {t.id: t.name for t in ctx.api.get_tags(ctx.workspace_id)}
+    project_map = build_project_map(ctx.api, ctx.workspace_id)
+    tag_map = build_tag_map(ctx.api, ctx.workspace_id)
 
     if mode.json:
         result = [
             time_entry_to_dict(
                 e,
-                project_name=project_map.get(e.project_id or ""),
-                tag_names=[tag_map.get(tid, tid) for tid in e.tag_ids],
+                project_name=resolve_project_name(project_map, e.project_id),
+                tag_names=resolve_tag_names(tag_map, e.tag_ids),
             )
             for e in entries
         ]
@@ -482,7 +358,7 @@ def projects(
         if not client_matches:
             print_error(f"clocky: No clients matching '{client}'")
             raise typer.Exit(2)
-        chosen_client = _pick_one(client_matches, "name")
+        chosen_client = pick_one(client_matches, "name")
         if not chosen_client:
             raise typer.Exit(0)
 
