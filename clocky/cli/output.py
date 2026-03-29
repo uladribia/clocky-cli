@@ -11,7 +11,7 @@ import sys
 from dataclasses import dataclass
 from typing import Any
 
-from clocky.models import TimeEntry
+from clocky.domain.models import TimeEntry
 
 
 @dataclass

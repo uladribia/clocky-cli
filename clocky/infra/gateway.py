@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from clocky.models import (
+from clocky.domain.models import (
     Client,
     Project,
     StartTimerRequest,
@@ -23,7 +23,7 @@ from clocky.models import (
 class ClockifyGateway(Protocol):
     """Typed boundary used by application and CLI code.
 
-    Production code uses :class:`clocky.api.ClockifyAPI`. Tests can provide any
+    Production code uses :class:`clocky.infra.api.ClockifyAPI`. Tests can provide any
     object implementing the same methods without inheriting from the production
     client.
     """

@@ -11,11 +11,11 @@ from typing import Any, cast
 import pytest
 from typer.testing import CliRunner
 
-import clocky.cli as cli
+import clocky.cli.main as cli
 import clocky.cli_helpers.selection as selection
-from clocky.context import AppContext
-from clocky.fuzzy import fuzzy_search_projects
-from clocky.models import Project, Tag, TimeEntry
+from clocky.domain.fuzzy import fuzzy_search_projects
+from clocky.domain.models import Project, Tag, TimeEntry
+from clocky.infra.context import AppContext
 from clocky.testing import MOCK_CLIENTS, MockClockifyAPI
 
 

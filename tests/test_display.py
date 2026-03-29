@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from clocky.display import format_duration
-from clocky.models import TimeEntry, TimeInterval
+from clocky.domain.models import TimeEntry, TimeInterval
+from clocky.ui.display import format_duration
 
 
 def test_format_duration() -> None:

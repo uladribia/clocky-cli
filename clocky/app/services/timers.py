@@ -9,14 +9,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from clocky.api import ClockifyAPIError
+from clocky.app.services.errors import ServiceUsageError
 from clocky.cli_helpers.selection import pick_one
 from clocky.cli_helpers.tagging import resolve_tag_ids
-from clocky.context import AppContext
-from clocky.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search_projects
-from clocky.lookup import build_project_map, build_tag_map, resolve_project_name, resolve_tag_names
-from clocky.models import Project, StartTimerRequest, StopTimerRequest, TimeEntry
-from clocky.services.errors import ServiceUsageError
+from clocky.domain.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search_projects
+from clocky.domain.lookup import (
+    build_project_map,
+    build_tag_map,
+    resolve_project_name,
+    resolve_tag_names,
+)
+from clocky.domain.models import Project, StartTimerRequest, StopTimerRequest, TimeEntry
+from clocky.infra.api import ClockifyAPIError
+from clocky.infra.context import AppContext
 
 
 @dataclass(frozen=True)

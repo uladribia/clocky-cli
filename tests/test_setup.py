@@ -11,8 +11,8 @@ from typing import cast
 import pytest
 from rich.console import Console
 
-import clocky.setup as clocky_setup
-from clocky.setup_service import (
+import clocky.cli.setup_flow as clocky_setup
+from clocky.infra.setup_service import (
     APIClientFactory,
     ConnectionCheckResult,
     build_env_content,

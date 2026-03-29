@@ -8,9 +8,9 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-import clocky.integration_smoke as integration_smoke
-from clocky.integration_smoke import CaseResult, resolve_missing_tag_project, run_cases
-from clocky.smoke_planner import RepresentativeCommand, SmokePlan
+import clocky.infra.cli_smoke as integration_smoke
+from clocky.infra.cli_smoke import CaseResult, resolve_missing_tag_project, run_cases
+from clocky.infra.smoke_planner import RepresentativeCommand, SmokePlan
 
 
 def _proc(returncode: int, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess[str]:

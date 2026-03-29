@@ -16,9 +16,9 @@ from pydantic_settings import BaseSettings
 from rich.panel import Panel
 from rich.prompt import Confirm
 
-import clocky.console as console_module
-from clocky.browser import CLOCKIFY_API_KEY_URL
-from clocky.browser import open_browser as _open_browser
+import clocky.ui.console as console_module
+from clocky.infra.browser import CLOCKIFY_API_KEY_URL
+from clocky.infra.browser import open_browser as _open_browser
 
 __all__ = [
     "CLOCKIFY_API_KEY_URL",

@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from clocky.app.services.errors import ServiceUsageError
 from clocky.cli_helpers.selection import pick_one
-from clocky.context import AppContext
-from clocky.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search, fuzzy_search_projects
-from clocky.models import Project
-from clocky.services.errors import ServiceUsageError
+from clocky.domain.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search, fuzzy_search_projects
+from clocky.domain.models import Project
+from clocky.infra.context import AppContext
 
 
 @dataclass(frozen=True)

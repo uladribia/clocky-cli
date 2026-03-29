@@ -12,9 +12,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 
-from clocky.api import ClockifyAPI
-from clocky.browser import CLOCKIFY_API_KEY_URL, open_browser
-from clocky.setup_service import (
+from clocky.infra.api import ClockifyAPI
+from clocky.infra.browser import CLOCKIFY_API_KEY_URL, open_browser
+from clocky.infra.setup_service import (
     APIClientFactory,
     detect_existing_config,
     verify_api_key,

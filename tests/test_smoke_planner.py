@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from clocky.smoke_planner import (
+from clocky.infra.smoke_planner import (
     DEFAULT_MISSING_TAG_PROJECT,
     DEFAULT_START_STOP_PROJECT,
     build_smoke_plan,

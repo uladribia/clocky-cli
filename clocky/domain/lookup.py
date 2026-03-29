@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from clocky.gateway import ClockifyGateway
+from clocky.infra.gateway import ClockifyGateway
 
 
 def build_project_map(api: ClockifyGateway, workspace_id: str) -> dict[str, str]:

@@ -96,7 +96,7 @@ class TestInstalledClockyCLI:
         # Use same .env logic as other integration test.
         from dotenv import dotenv_values
 
-        from clocky.api import ClockifyAPI
+        from clocky.infra.api import ClockifyAPI
 
         env_path = _repo_root() / ".env"
         values = dotenv_values(env_path) if env_path.exists() else {}

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from clocky.browser import CLOCKIFY_API_KEY_URL
+from clocky.infra.browser import CLOCKIFY_API_KEY_URL
 
 
 class UserLookup(Protocol):

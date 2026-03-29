@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from clocky.fuzzy import fuzzy_best, fuzzy_search, fuzzy_search_projects, fuzzy_search_tags
-from clocky.models import Project, Tag, TimeEntry
+from clocky.domain.fuzzy import fuzzy_best, fuzzy_search, fuzzy_search_projects, fuzzy_search_tags
+from clocky.domain.models import Project, Tag, TimeEntry
 from clocky.testing import MOCK_CLIENTS, MOCK_PROJECTS
 
 

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from clocky.models import StartTimerRequest, StopTimerRequest
+from clocky.domain.models import StartTimerRequest, StopTimerRequest
 from clocky.testing import (
     MOCK_CLIENTS,
     MOCK_PROJECTS,

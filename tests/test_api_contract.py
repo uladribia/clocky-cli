@@ -8,8 +8,8 @@ from __future__ import annotations
 import pytest
 from pytest_httpx import HTTPXMock
 
-from clocky.api import ClockifyAPI, ClockifyAPIError
-from clocky.models import StartTimerRequest
+from clocky.domain.models import StartTimerRequest
+from clocky.infra.api import ClockifyAPI, ClockifyAPIError
 
 
 @pytest.fixture

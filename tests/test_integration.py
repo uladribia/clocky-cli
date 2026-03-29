@@ -14,9 +14,9 @@ from pathlib import Path
 
 import pytest
 
-from clocky.api import ClockifyAPI
-from clocky.models import StartTimerRequest, StopTimerRequest
-from clocky.smoke_planner import DEFAULT_START_STOP_PROJECT
+from clocky.domain.models import StartTimerRequest, StopTimerRequest
+from clocky.infra.api import ClockifyAPI
+from clocky.infra.smoke_planner import DEFAULT_START_STOP_PROJECT
 
 # Skip by default — run explicitly with: pytest tests/test_integration.py
 pytestmark = pytest.mark.skipif(

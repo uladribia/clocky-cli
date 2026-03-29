@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 
 from rapidfuzz import fuzz
 
-from clocky.models import Project, Tag, TimeEntry
+from clocky.domain.models import Project, Tag, TimeEntry
 
 DEFAULT_CUTOFF = 40.0
 DEFAULT_LIMIT = 10

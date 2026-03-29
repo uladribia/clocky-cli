@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from clocky.cli import main
+from clocky.cli.main import main
 
 if __name__ == "__main__":
     main()

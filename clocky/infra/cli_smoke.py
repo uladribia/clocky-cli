@@ -14,7 +14,7 @@ import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from clocky.smoke_planner import (
+from clocky.infra.smoke_planner import (
     DEFAULT_MISSING_TAG_PROJECT,
     SmokePlan,
     build_smoke_plan,

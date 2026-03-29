@@ -11,10 +11,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-import clocky.cli as cli
-import clocky.cli_tag_map as cli_tag_map
-from clocky.context import AppContext
-from clocky.tag_map import TagMap
+import clocky.cli.main as cli
+import clocky.cli.tag_map as cli_tag_map
+from clocky.infra.context import AppContext
+from clocky.infra.tag_map import TagMap
 from clocky.testing import MOCK_PROJECTS, MOCK_TAGS, MockClockifyAPI
 
 

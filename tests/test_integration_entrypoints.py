@@ -10,7 +10,7 @@ import subprocess
 
 from typer.testing import CliRunner
 
-import clocky.cli as cli
+import clocky.cli.main as cli
 
 
 def test_integration_test_help_includes_plan() -> None:

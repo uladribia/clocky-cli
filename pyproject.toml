@@ -1,6 +1,6 @@
 [project]
 name = "clocky-cli"
-version = "2.4.0"
+version = "2.5.0"
 description = "A CLI to interact with your Clockify account, with fuzzy project search and Ubuntu launchers."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -25,7 +25,7 @@ dev = [
 ]
 
 [project.scripts]
-clocky = "clocky.cli:main"
+clocky = "clocky.cli.main:main"
 
 [tool.setuptools.packages.find]
 include = ["clocky*"]

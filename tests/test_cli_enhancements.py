@@ -11,9 +11,9 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-import clocky.cli as cli
-from clocky.context import AppContext
-from clocky.smoke_planner import RepresentativeCommand, SmokePlan
+import clocky.cli.main as cli
+from clocky.infra.context import AppContext
+from clocky.infra.smoke_planner import RepresentativeCommand, SmokePlan
 from clocky.testing import MOCK_TIME_ENTRIES, MockClockifyAPI
 
 

@@ -31,7 +31,7 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 
 ## Installation
 
-> Version: **v2.4.0**
+> Version: **v2.5.0**
 
 ### 1. Clone the repository
 
@@ -258,27 +258,19 @@ Then add keyboard shortcuts in **Settings → Keyboard → Custom Shortcuts**:
 ```
 clocky-cli/
 ├── clocky/
-│   ├── api.py           # ClockifyAPI HTTP client
-│   ├── cli.py           # Typer CLI commands
-│   ├── cli_tag_map.py   # Tag-map subcommands
-│   ├── config.py        # Settings via pydantic-settings + .env
-│   ├── context.py       # AppContext lifecycle + workspace resolution
-│   ├── display.py       # Rich-based terminal output
-│   ├── fuzzy.py         # rapidfuzz ranking utilities
-│   ├── gateway.py       # Protocol boundary for Clockify access
-│   ├── models.py        # Pydantic data models
-│   ├── output.py        # JSON output and mode state
-│   ├── services/        # Timer/project application services
-│   ├── setup.py         # Interactive setup wizard
-│   ├── smoke_planner.py # Log-driven integration smoke planning
-│   ├── tag_map.py       # Persistent project→tag mapping
-│   └── testing.py       # Offline fake API for tests
-├── launchers/           # Ubuntu .desktop files and shell scripts
-├── tests/               # pytest test suite
-├── check.sh             # Format → lint → typecheck → test
-├── install.sh           # One-step global installer
+│   ├── app/            # Application services (timers, projects)
+│   ├── cli/            # Typer entrypoints, CLI output, and setup flows
+│   ├── cli_helpers/    # Shared interactive selection/tagging helpers
+│   ├── domain/         # Models and pure ranking/lookup logic
+│   ├── infra/          # API, config, context, smoke planning, persistence
+│   ├── testing/        # Offline fake API and fixtures for tests
+│   └── ui/             # Rich console and display helpers
+├── launchers/          # Ubuntu .desktop files and shell scripts
+├── tests/              # pytest test suite
+├── check.sh            # Format → lint → typecheck → test
+├── install.sh          # One-step global installer
 ├── pyproject.toml
-├── AGENTS.md           # Agent/AI workflow and coding practices
+├── AGENTS.md          # Agent/AI workflow and coding practices
 └── README.md
 ```
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from clocky.tag_map import TagMap, tag_map_path
+from clocky.infra.tag_map import TagMap, tag_map_path
 
 
 def test_tag_map_empty_load(monkeypatch: __import__("pytest").MonkeyPatch, tmp_path: Path) -> None:

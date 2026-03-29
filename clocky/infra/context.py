@@ -8,10 +8,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from types import TracebackType
 
-from clocky.api import ClockifyAPI
-from clocky.config import load_settings
-from clocky.gateway import ClockifyGateway
-from clocky.models import User
+from clocky.domain.models import User
+from clocky.infra.api import ClockifyAPI
+from clocky.infra.config import load_settings
+from clocky.infra.gateway import ClockifyGateway
 
 
 @dataclass

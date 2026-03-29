@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from clocky.models import Project, StartTimerRequest, TimeEntry, User
+from clocky.domain.models import Project, StartTimerRequest, TimeEntry, User
 
 
 class TestUser:

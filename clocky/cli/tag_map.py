@@ -13,9 +13,9 @@ import questionary
 import typer
 
 from clocky.cli_helpers.selection import fuzzy_choices
-from clocky.context import build_context
-from clocky.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search_projects, fuzzy_search_tags
-from clocky.tag_map import TagMap, tag_map_path
+from clocky.domain.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search_projects, fuzzy_search_tags
+from clocky.infra.context import build_context
+from clocky.infra.tag_map import TagMap, tag_map_path
 
 if TYPE_CHECKING:
     from rich.console import Console

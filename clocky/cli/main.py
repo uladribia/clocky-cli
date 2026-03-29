@@ -14,19 +14,18 @@ from typing import Annotated
 
 import typer
 
-from clocky.api import ClockifyAPIError
-from clocky.console import console
-from clocky.context import build_context
-from clocky.display import (
-    print_error,
-    print_no_timer,
-    print_projects,
-    print_status,
-    print_success,
-    print_time_entries,
-    print_timer_stopped,
+from clocky.app.services.errors import ServiceUsageError
+from clocky.app.services.projects import list_projects
+from clocky.app.services.timers import (
+    delete_time_entry,
+    get_status_data,
+    list_time_entries,
+    start_timer,
+    stop_timer,
 )
-from clocky.integration_smoke import (
+from clocky.cli.output import emit_json, get_mode, set_mode, time_entry_to_dict
+from clocky.infra.api import ClockifyAPIError
+from clocky.infra.cli_smoke import (
     DEFAULT_CASES,
     DEFAULT_HISTORY_LIMIT,
     build_smoke_plan,
@@ -34,15 +33,16 @@ from clocky.integration_smoke import (
     run_integration_smoke,
     smoke_plan_to_dict,
 )
-from clocky.output import emit_json, get_mode, set_mode, time_entry_to_dict
-from clocky.services.errors import ServiceUsageError
-from clocky.services.projects import list_projects
-from clocky.services.timers import (
-    delete_time_entry,
-    get_status_data,
-    list_time_entries,
-    start_timer,
-    stop_timer,
+from clocky.infra.context import build_context
+from clocky.ui.console import console
+from clocky.ui.display import (
+    print_error,
+    print_no_timer,
+    print_projects,
+    print_status,
+    print_success,
+    print_time_entries,
+    print_timer_stopped,
 )
 
 app = typer.Typer(
@@ -87,7 +87,7 @@ def _main_options(
     set_mode(json_mode=json_output, quiet=quiet or json_output)
 
 
-# Subcommands are registered below (see clocky.cli_tag_map).
+# Subcommands are registered below (see clocky.cli.tag_map).
 
 # -----------------------------------------------------------------------------
 # Commands
@@ -97,7 +97,7 @@ def _main_options(
 @app.command()
 def setup() -> None:
     """Run interactive setup to configure your API key."""
-    from clocky.setup import setup as run_setup
+    from clocky.cli.setup_flow import setup as run_setup
 
     run_setup()
 
@@ -284,7 +284,7 @@ def stop(
             and sys.stdin.isatty()
             and not mode.quiet
         ):
-            from clocky.display import format_duration
+            from clocky.ui.display import format_duration
 
             confirm = typer.confirm(
                 f"Timer has been running for {format_duration(elapsed)}. Stop it?"
@@ -401,7 +401,7 @@ def delete(
 
 
 # Register subcommands at import time so they also appear in `--help`.
-from clocky.cli_tag_map import register as _register_tag_map  # noqa: E402
+from clocky.cli.tag_map import register as _register_tag_map  # noqa: E402
 
 _register_tag_map(app, console)
 

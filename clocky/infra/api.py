@@ -11,7 +11,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel
 
-from clocky.models import (
+from clocky.domain.models import (
     Client,
     Project,
     StartTimerRequest,

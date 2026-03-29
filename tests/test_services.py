@@ -5,10 +5,10 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from clocky.context import AppContext
-from clocky.services.errors import ServiceUsageError
-from clocky.services.projects import list_projects
-from clocky.services.timers import get_status_data, list_time_entries, start_timer, stop_timer
+from clocky.app.services.errors import ServiceUsageError
+from clocky.app.services.projects import list_projects
+from clocky.app.services.timers import get_status_data, list_time_entries, start_timer, stop_timer
+from clocky.infra.context import AppContext
 from clocky.testing import MOCK_TIME_ENTRIES, MockClockifyAPI
 
 

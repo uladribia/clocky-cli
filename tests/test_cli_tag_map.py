@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-import clocky.cli as cli
+import clocky.cli.main as cli
 
 
 def test_tag_map_help_available() -> None:

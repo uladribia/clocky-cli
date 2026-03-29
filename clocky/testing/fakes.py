@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from clocky.models import (
+from clocky.domain.models import (
     Client,
     Project,
     StartTimerRequest,
@@ -235,3 +235,14 @@ class MockClockifyAPI:
 
     def close(self) -> None:
         """No-op for mock."""
+
+
+__all__ = [
+    "MOCK_CLIENTS",
+    "MOCK_PROJECTS",
+    "MOCK_TAGS",
+    "MOCK_TIME_ENTRIES",
+    "MOCK_USER",
+    "MOCK_WORKSPACES",
+    "MockClockifyAPI",
+]

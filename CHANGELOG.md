@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.5.0 - 2026-03-29
+
+### Changed
+- Reorganized the internal package layout into layered `app`, `cli`, `domain`, `infra`, `testing`, and `ui` packages.
+- Moved the console script entrypoint to `clocky.cli.main:main` and added `python -m clocky.cli` package execution support.
+- Updated tests and architecture documentation to reflect the new package structure.
+
 ## 2.4.0 - 2026-03-29
 
 ### Added

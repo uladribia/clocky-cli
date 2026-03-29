@@ -11,8 +11,8 @@ from datetime import UTC, datetime, timedelta
 from rich import box
 from rich.table import Table
 
-from clocky.console import console, err_console
-from clocky.models import Project, TimeEntry
+from clocky.domain.models import Project, TimeEntry
+from clocky.ui.console import console, err_console
 
 
 def format_duration(delta: timedelta) -> str:

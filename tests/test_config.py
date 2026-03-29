@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
-from clocky.config import (
+from clocky.infra.config import (
     CLOCKIFY_API_KEY_URL,
     ConfigurationLoadError,
     Settings,
@@ -149,7 +149,7 @@ class TestLoadSettings:
 
             try:
                 with (
-                    patch("clocky.config._show_setup_guide"),
+                    patch("clocky.infra.config._show_setup_guide"),
                     pytest.raises(SystemExit) as exc,
                 ):
                     load_settings()
@@ -168,7 +168,7 @@ class TestLoadSettings:
         os.chdir(tmp_path)
         try:
             with (
-                patch("clocky.config._show_setup_guide"),
+                patch("clocky.infra.config._show_setup_guide"),
                 pytest.raises(SystemExit),
             ):
                 load_settings()
@@ -181,7 +181,7 @@ class TestLoadSettings:
         os.chdir(tmp_path)
         try:
             with (
-                patch("clocky.config._show_setup_guide"),
+                patch("clocky.infra.config._show_setup_guide"),
                 pytest.raises(SystemExit),
             ):
                 load_settings()

@@ -13,14 +13,14 @@ from typing import TYPE_CHECKING
 import typer
 from rich.console import Console
 
-from clocky.display import print_error
-from clocky.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search_tags
-from clocky.models import Tag, TimeEntry
-from clocky.output import get_mode
-from clocky.tag_map import TagMap
+from clocky.cli.output import get_mode
+from clocky.domain.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search_tags
+from clocky.domain.models import Tag, TimeEntry
+from clocky.infra.tag_map import TagMap
+from clocky.ui.display import print_error
 
 if TYPE_CHECKING:
-    from clocky.gateway import ClockifyGateway
+    from clocky.infra.gateway import ClockifyGateway
 
 _no_color = bool(__import__("os").environ.get("NO_COLOR"))
 console = Console(no_color=_no_color)

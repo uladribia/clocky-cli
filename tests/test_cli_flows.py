@@ -11,8 +11,8 @@ from __future__ import annotations
 import pytest
 from typer.testing import CliRunner
 
-import clocky.cli as cli
-from clocky.context import AppContext
+import clocky.cli.main as cli
+from clocky.infra.context import AppContext
 from clocky.testing import MockClockifyAPI
 
 
