@@ -13,7 +13,12 @@ import questionary
 import typer
 
 from clocky.context import build_context
-from clocky.fuzzy import fuzzy_choices, fuzzy_search
+from clocky.fuzzy import (
+    SEARCH_HISTORY_LIMIT,
+    fuzzy_choices,
+    fuzzy_search_projects,
+    fuzzy_search_tags,
+)
 from clocky.tag_map import TagMap, tag_map_path
 
 if TYPE_CHECKING:
@@ -115,9 +120,14 @@ def register(app: typer.Typer, console: Console) -> None:
 
         projects = ctx.api.get_projects(ctx.workspace_id)
         tags = ctx.api.get_tags(ctx.workspace_id)
+        recent_entries = ctx.api.get_time_entries(
+            ctx.workspace_id,
+            ctx.user.id,
+            limit=SEARCH_HISTORY_LIMIT,
+        )
 
         project_query = typer.prompt("Project (fuzzy)").strip()
-        project_matches = fuzzy_search(project_query, projects, key=lambda p: p.name)
+        project_matches = fuzzy_search_projects(project_query, projects, recent_entries)
         if not project_matches:
             raise typer.BadParameter(f"No projects matching '{project_query}'")
 
@@ -128,7 +138,12 @@ def register(app: typer.Typer, console: Console) -> None:
             return
 
         tag_query = typer.prompt(f"Tag for '{chosen_project.name}' (fuzzy)").strip()
-        tag_matches = fuzzy_search(tag_query, tags, key=lambda t: t.name)
+        tag_matches = fuzzy_search_tags(
+            tag_query,
+            tags,
+            recent_entries,
+            project_id=chosen_project.id,
+        )
         if not tag_matches:
             raise typer.BadParameter(f"No tags matching '{tag_query}'")
 

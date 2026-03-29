@@ -28,7 +28,7 @@ from clocky.display import (
     print_time_entries,
     print_timer_stopped,
 )
-from clocky.fuzzy import fuzzy_search
+from clocky.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search, fuzzy_search_projects
 from clocky.integration_smoke import DEFAULT_CASES, DEFAULT_HISTORY_LIMIT, run_integration_smoke
 from clocky.lookup import build_project_map, build_tag_map, resolve_project_name, resolve_tag_names
 from clocky.models import StartTimerRequest, StopTimerRequest
@@ -179,7 +179,7 @@ def start(
         bool,
         typer.Option(
             "--non-interactive/--interactive",
-            help="Never prompt; auto-pick best fuzzy match",
+            help="Never prompt; auto-pick the top weighted match",
         ),
     ] = False,
     dry_run: Annotated[
@@ -192,7 +192,12 @@ def start(
     ctx = build_context()
 
     all_projects = ctx.api.get_projects(ctx.workspace_id)
-    matches = fuzzy_search(project, all_projects, key=lambda p: p.name)
+    recent_entries = ctx.api.get_time_entries(
+        ctx.workspace_id,
+        ctx.user.id,
+        limit=SEARCH_HISTORY_LIMIT,
+    )
+    matches = fuzzy_search_projects(project, all_projects, recent_entries)
     if not matches:
         print_error(f"clocky: No projects matching '{project}'")
         raise typer.Exit(2)
@@ -214,6 +219,7 @@ def start(
         all_tags,
         auto_tag=auto_tag,
         non_interactive=non_interactive,
+        recent_entries=recent_entries,
     )
 
     tag_map = {t.id: t.name for t in all_tags}
@@ -366,7 +372,12 @@ def projects(
         all_projects = [p for p in all_projects if p.client_id == chosen_client.id]
 
     if search:
-        proj_matches = fuzzy_search(search, all_projects, key=lambda p: p.name)
+        recent_entries = ctx.api.get_time_entries(
+            ctx.workspace_id,
+            ctx.user.id,
+            limit=SEARCH_HISTORY_LIMIT,
+        )
+        proj_matches = fuzzy_search_projects(search, all_projects, recent_entries)
         if not proj_matches:
             print_error(f"clocky: No projects matching '{search}'")
             raise typer.Exit(2)

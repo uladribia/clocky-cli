@@ -74,7 +74,7 @@ clocky --json delete entry-abc --force
 
 Suppresses informational output (`Project:`, `Tag:` lines). Errors still go to stderr. Success messages still print.
 
-**Note on non-interactive mode:** When `--non-interactive` is used with `start` command, a 100% (exact) fuzzy match is now required for project selection. If no exact match is found, the command will exit with an error, preventing accidental time tracking to an unintended project. This ensures safety in automated scripts.
+**Note on non-interactive mode:** `clocky start --non-interactive` uses the same weighted fuzzy ranking as interactive mode. The only difference is selection: interactive mode prompts from the ranked list, while non-interactive mode auto-picks the top result.
 
 ```bash
 clocky --quiet start "web" --non-interactive

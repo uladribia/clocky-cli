@@ -35,7 +35,7 @@ clocky tag-map show
 
 ### `tag-map pick`
 
-Interactive flow: fuzzy-search a project, then fuzzy-search a tag, and save:
+Interactive flow: weighted-fuzzy-search a project, then weighted-fuzzy-search a tag, and save:
 
 ```bash
 clocky tag-map pick

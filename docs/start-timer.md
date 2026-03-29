@@ -14,7 +14,7 @@ clocky start "mobile" --dry-run                      # preview only
 
 ## Fuzzy project matching
 
-clocky uses [rapidfuzz](https://github.com/rapidfuzz/RapidFuzz) to match your input against all workspace projects. Typos and partial names work.
+clocky uses [rapidfuzz](https://github.com/rapidfuzz/RapidFuzz) with a weighted ranking model. Typos, prefixes, token order, and your recent project/tag history all contribute to the final score.
 
 ```bash
 clocky start "cros-selling"   # matches "Cross-selling"
@@ -70,7 +70,7 @@ clocky --json start "mobile" --dry-run --non-interactive
 
 ## Non-interactive mode
 
-For scripts and launchers. Auto-picks the best fuzzy match without prompting:
+For scripts and launchers. It uses the same weighted ranking as interactive mode and auto-picks the top result instead of prompting:
 
 ```bash
 clocky start --non-interactive "cros-selling"
@@ -84,5 +84,8 @@ clocky start --non-interactive "cros-selling"
 | `--description` | `-d` | `""` | Timer description |
 | `--tag` | `-t` | auto | Tag name(s), repeatable |
 | `--auto-tag / --no-auto-tag` | | `--auto-tag` | Infer from history |
-| `--non-interactive / --interactive` | | `--interactive` | Auto-pick best match |
+| `--non-interactive / --interactive` | | `--interactive` | Auto-pick top weighted match |
 | `--dry-run` | | off | Preview without starting |
+|
+ry-run` | | off | Preview without starting |
+|

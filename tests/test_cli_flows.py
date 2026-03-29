@@ -41,7 +41,10 @@ def test_start_non_interactive_sets_project(
     runner: CliRunner, ctx: AppContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(cli, "build_context", lambda: ctx)
-    result = runner.invoke(cli.app, ["start", "Project Alpha", "--non-interactive"])
+    result = runner.invoke(
+        cli.app,
+        ["start", "Website Redesign", "--non-interactive", "--tag", "billable"],
+    )
     assert result.exit_code == 0
     assert "Timer started" in result.output
 
@@ -60,7 +63,10 @@ def test_list_shows_table(
 ) -> None:
     # Add a timer entry
     monkeypatch.setattr(cli, "build_context", lambda: ctx)
-    _ = runner.invoke(cli.app, ["start", "Project Alpha", "--non-interactive"])
+    _ = runner.invoke(
+        cli.app,
+        ["start", "Website Redesign", "--non-interactive", "--tag", "billable"],
+    )
     _ = runner.invoke(cli.app, ["stop"])
 
     result = runner.invoke(cli.app, ["list", "--limit", "5"])

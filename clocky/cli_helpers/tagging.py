@@ -14,8 +14,8 @@ import typer
 from rich.console import Console
 
 from clocky.display import print_error
-from clocky.fuzzy import fuzzy_search
-from clocky.models import Tag
+from clocky.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search_tags
+from clocky.models import Tag, TimeEntry
 from clocky.output import get_mode
 from clocky.tag_map import TagMap
 
@@ -32,6 +32,8 @@ def infer_tag_for_project(
     user_id: str,
     project_id: str,
     limit: int = 50,
+    *,
+    recent_entries: list[TimeEntry] | None = None,
 ) -> str | None:
     """Infer the most likely tag for a project based on recent entries.
 
@@ -44,12 +46,13 @@ def infer_tag_for_project(
         user_id: Active user ID.
         project_id: Project to infer a tag for.
         limit: Number of recent entries to inspect.
+        recent_entries: Optional pre-fetched recent entries.
 
     Returns:
-        The most commonly used tag ID, or None if no data exists.
+        The most commonly used tag ID, or ``None`` if no data exists.
 
     """
-    entries = api.get_time_entries(workspace_id, user_id, limit=limit)
+    entries = recent_entries or api.get_time_entries(workspace_id, user_id, limit=limit)
 
     tag_counts: Counter[str] = Counter()
     for entry in entries:
@@ -75,6 +78,7 @@ def resolve_tag_ids(
     *,
     auto_tag: bool,
     non_interactive: bool,
+    recent_entries: list[TimeEntry] | None = None,
 ) -> list[str]:
     """Resolve tag IDs from explicit tags, stored mapping, history, or prompt.
 
@@ -91,14 +95,15 @@ def resolve_tag_ids(
         all_tags: All available tags in the workspace.
         auto_tag: Whether to infer a tag from recent history.
         non_interactive: Whether to suppress interactive prompts.
+        recent_entries: Optional pre-fetched recent entries.
 
     Returns:
-        List of resolved tag IDs (may be empty).
+        List of resolved tag IDs, which may be empty.
 
     Raises:
-        typer.Exit: With code 1 when ``non_interactive`` is True and no tag
-            mapping exists. Prints ``CLOCKY_ERROR_MISSING_TAG_MAP`` to
-            stderr as a launcher-readable sentinel before exiting.
+        typer.Exit: With code 1 when ``non_interactive`` is ``True`` and no tag
+            mapping exists. Prints ``CLOCKY_ERROR_MISSING_TAG_MAP`` to stderr as
+            a launcher-readable sentinel before exiting.
 
     """
     from clocky.cli_helpers.selection import pick_one
@@ -106,14 +111,22 @@ def resolve_tag_ids(
     mode = get_mode()
     tags_by_id = {t.id: t for t in all_tags}
     tag_ids: list[str] = []
+    history = recent_entries or api.get_time_entries(
+        workspace_id,
+        user_id,
+        limit=SEARCH_HISTORY_LIMIT,
+    )
 
     if tags is not None:
-        # Explicit tags: fuzzy-resolve each one and persist a 1:1 mapping when
-        # exactly one tag is provided.
-        for t in tags:
-            tag_matches = fuzzy_search(t, all_tags, key=lambda tag: tag.name)
+        for tag_query in tags:
+            tag_matches = fuzzy_search_tags(
+                tag_query,
+                all_tags,
+                history,
+                project_id=project_id,
+            )
             if not tag_matches:
-                print_error(f"Tag '{t}' not found, skipping")
+                print_error(f"Tag '{tag_query}' not found, skipping")
                 continue
             chosen_tag = pick_one(tag_matches, "name", non_interactive=non_interactive)
             if chosen_tag:
@@ -127,7 +140,6 @@ def resolve_tag_ids(
             TagMap.load().set(project_id, tag_ids[0]).save()
 
     else:
-        # No tags provided: stored mapping → history inference → interactive prompt
         tag_map = TagMap.load()
         mapped = tag_map.get(project_id)
 
@@ -139,7 +151,13 @@ def resolve_tag_ids(
                 )
 
         elif auto_tag:
-            inferred = infer_tag_for_project(api, workspace_id, user_id, project_id)
+            inferred = infer_tag_for_project(
+                api,
+                workspace_id,
+                user_id,
+                project_id,
+                recent_entries=history,
+            )
             if inferred and inferred in tags_by_id:
                 tag_ids.append(inferred)
                 if not mode.quiet:
@@ -152,7 +170,12 @@ def resolve_tag_ids(
             console.print(f"\nNo tag found for project [cyan]{project_name}[/cyan].")
             tag_query = typer.prompt("Tag (fuzzy)").strip()
             if tag_query:
-                tag_matches = fuzzy_search(tag_query, all_tags, key=lambda tag: tag.name)
+                tag_matches = fuzzy_search_tags(
+                    tag_query,
+                    all_tags,
+                    history,
+                    project_id=project_id,
+                )
                 if tag_matches:
                     chosen_tag = pick_one(tag_matches, "name", non_interactive=non_interactive)
                     if chosen_tag:
@@ -164,7 +187,6 @@ def resolve_tag_ids(
                             )
 
         if not tag_ids and non_interactive:
-            # Launcher-friendly sentinel for GUI scripts.
             Console(stderr=True).print("CLOCKY_ERROR_MISSING_TAG_MAP")
             print_error(
                 f"No tag mapping found for '{project_name}'. Provide --tag once to set it, "

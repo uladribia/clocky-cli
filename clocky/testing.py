@@ -135,6 +135,7 @@ class MockClockifyAPI(ClockifyAPI):
         projects: list[Project] | None = None,
         tags: list[Tag] | None = None,
         clients: list[Client] | None = None,
+        time_entries: list[TimeEntry] | None = None,
     ) -> None:
         """Create mock API.
 
@@ -143,6 +144,7 @@ class MockClockifyAPI(ClockifyAPI):
             projects: Custom list of projects for this mock instance.
             tags: Custom list of tags for this mock instance.
             clients: Custom list of clients for this mock instance.
+            time_entries: Custom list of time entries for this mock instance.
 
         """
         # Skip parent __init__ — no HTTP client needed
@@ -150,6 +152,7 @@ class MockClockifyAPI(ClockifyAPI):
         self._projects = projects if projects is not None else MOCK_PROJECTS
         self._tags = tags if tags is not None else MOCK_TAGS
         self._clients = clients if clients is not None else MOCK_CLIENTS
+        self._time_entries = time_entries if time_entries is not None else MOCK_TIME_ENTRIES
 
     def get_user(self) -> User:
         """Return mock user."""
@@ -182,7 +185,7 @@ class MockClockifyAPI(ClockifyAPI):
     ) -> list[TimeEntry]:
         """Return mock time entries."""
         del workspace_id, user_id  # unused
-        return MOCK_TIME_ENTRIES[:limit]
+        return self._time_entries[:limit]
 
     def get_running_timer(self, workspace_id: str, user_id: str) -> TimeEntry | None:
         """Return the configured running timer."""
