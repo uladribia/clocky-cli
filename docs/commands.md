@@ -31,14 +31,14 @@ clocky integration-test    # real integration smoke tests
 
 ### `start <project>`
 
-Start a timer with fuzzy project matching.
+Start a timer with weighted fuzzy project matching.
 
 | Option | Short | Default | Description |
 |--------|-------|---------|-------------|
 | `--description` | `-d` | `""` | Timer description |
 | `--tag` | `-t` | auto | Tag name(s), repeatable |
 | `--auto-tag / --no-auto-tag` | | `--auto-tag` | Infer tag from history |
-| `--non-interactive / --interactive` | | `--interactive` | Auto-pick best match |
+| `--non-interactive / --interactive` | | `--interactive` | Auto-pick top weighted match |
 | `--dry-run` | | off | Preview without starting |
 
 ### `stop`

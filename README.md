@@ -31,7 +31,7 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 
 ## Installation
 
-> Version: **v2.2.0**
+> Version: **v2.3.0**
 
 ### 1. Clone the repository
 
@@ -133,7 +133,7 @@ clocky start "mobile" --tag "billable" --tag "meeting"
 # Disable auto-tag inference
 clocky start "mobile" --no-auto-tag
 
-# Non-interactive (best match, no prompts — for scripts/launchers)
+# Non-interactive (top weighted match, no prompts — for scripts/launchers)
 clocky start --non-interactive "cros-selling"
 
 # Preview without starting
@@ -223,7 +223,7 @@ The `launchers/` directory contains shell scripts and `.desktop` files to contro
 
 Press **Super+C** (or your chosen shortcut) to:
 1. Open a dialog to type a project name (fuzzy)
-2. Start the timer using the best fuzzy match (no terminal prompts)
+2. Start the timer using the top weighted fuzzy match (no terminal prompts)
 3. If no tag is mapped yet, ask for a tag (free text, fuzzy matched)
 4. Show a notification with the chosen project and tag
 
@@ -304,3 +304,4 @@ uv run python scripts/integration_smoke.py
 ## Authentication
 
 All API calls use the `X-Api-Key` header. Your key is read from `CLOCKIFY_API_KEY` (environment variable or `.env`). It is never stored anywhere else or logged.
+

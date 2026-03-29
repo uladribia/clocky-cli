@@ -42,7 +42,7 @@ Your API key is likely invalid or expired.
 
 ### `No projects matching 'foobar'` / `No clients matching 'foobar'`
 
-The fuzzy search couldn't find any close matches.
+The weighted fuzzy search couldn't find any close matches.
 
 **Solution**:
 - Double-check spelling.

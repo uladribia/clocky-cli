@@ -20,7 +20,7 @@ Typer CLI → API client → Clockify REST API. Rich for display, rapidfuzz for 
 | `context.py` | `AppContext` dataclass (API + user + workspace) |
 | `display.py` | Rich console output (tables, status, errors) |
 | `output.py` | Global `--json`/`--quiet` state, JSON serialisation |
-| `fuzzy.py` | `fuzzy_search`, `fuzzy_best`, `fuzzy_choices` |
+| `fuzzy.py` | Weighted ranking, `fuzzy_search*`, `fuzzy_best`, `fuzzy_choices` |
 | `tag_map.py` | Persistent project→tag JSON file |
 | `setup.py` | Interactive first-run setup wizard |
 | `browser.py` | `open_browser()` helper (xdg-open / webbrowser) |
@@ -46,7 +46,7 @@ User input
 | Global output mode via `output.py` singleton | Avoids threading mode through every function |
 | `testing.py` with `MockClockifyAPI` | All tests run offline; no network mocking needed |
 | `TagMap` is a frozen dataclass | Immutable `.set()` returns new instance; explicit `.save()` |
-| Fuzzy search with `rapidfuzz.fuzz.WRatio` | Best general-purpose scorer for short strings |
+| Weighted fuzzy search with rapidfuzz + recent usage priors | Better typo tolerance while preferring projects and tags you actually use |
 
 ## Dependencies
 

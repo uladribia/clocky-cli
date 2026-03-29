@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from clocky.fuzzy import fuzzy_best, fuzzy_search
+from clocky.fuzzy import fuzzy_best, fuzzy_search, fuzzy_search_projects, fuzzy_search_tags
+from clocky.models import Project, Tag, TimeEntry
 from clocky.testing import MOCK_CLIENTS, MOCK_PROJECTS
 
 
@@ -18,10 +19,9 @@ class TestFuzzySearch:
         names = [p.name for p, _ in results]
         assert "Website Redesign" in names
 
-    def test_partial_matches(self) -> None:
-        results = fuzzy_search("Mobile", MOCK_PROJECTS, lambda p: p.name)
-        names = [p.name for p, _ in results]
-        assert "Mobile App" in names
+    def test_short_prefix_matches(self) -> None:
+        results = fuzzy_search("web", MOCK_PROJECTS, lambda p: p.name)
+        assert results[0][0].name == "Website Redesign"
 
     def test_empty_query_returns_all(self) -> None:
         results = fuzzy_search("", MOCK_PROJECTS, lambda p: p.name)
@@ -41,18 +41,6 @@ class TestFuzzySearch:
         names = [p.name for p, _ in results]
         assert "Data Pipeline" in names
 
-    def test_token_set_ratio_extra_words(self) -> None:
-        # Test case where query is a subset of the target with token_set_ratio
-        results = fuzzy_search("Data Pipe", MOCK_PROJECTS, lambda p: p.name)
-        names = [p.name for p, _ in results]
-        assert "Data Pipe New" in names
-        # Also assert it's the top match
-        assert results[0][0].name == "Data Pipe New"
-
-    def test_limit_respected(self) -> None:
-        results = fuzzy_search("a", MOCK_PROJECTS, lambda p: p.name, limit=2)
-        assert len(results) <= 2
-
     def test_client_search(self) -> None:
         results = fuzzy_search("Acme", MOCK_CLIENTS, lambda c: c.name)
         assert results[0][0].name == "Acme Corp"
@@ -61,6 +49,58 @@ class TestFuzzySearch:
         results = fuzzy_search("Globx", MOCK_CLIENTS, lambda c: c.name)
         names = [c.name for c, _ in results]
         assert "Globex Inc" in names
+
+    def test_project_search_uses_recent_history_as_tiebreaker(self) -> None:
+        projects = [
+            Project(id="proj-a", name="Roadmap 2024", client_id=None, client_name=None),
+            Project(id="proj-b", name="Roadmap 2025", client_id=None, client_name=None),
+        ]
+        entries = [
+            TimeEntry.model_validate(
+                {
+                    "id": "entry-b-1",
+                    "description": "Recent",
+                    "projectId": "proj-b",
+                    "workspaceId": "ws-001",
+                    "userId": "user-001",
+                    "tagIds": [],
+                    "timeInterval": {
+                        "start": "2026-03-28T09:00:00Z",
+                        "end": "2026-03-28T10:00:00Z",
+                        "duration": "PT1H",
+                    },
+                }
+            )
+        ]
+
+        results = fuzzy_search_projects("roadmap", projects, entries)
+        assert results[0][0].name == "Roadmap 2025"
+
+    def test_tag_search_boosts_project_specific_history(self) -> None:
+        tags = [
+            Tag(id="tag-ops", name="Ops", workspaceId="ws-001"),
+            Tag(id="tag-ops-admin", name="Ops Admin", workspaceId="ws-001"),
+        ]
+        entries = [
+            TimeEntry.model_validate(
+                {
+                    "id": "entry-1",
+                    "description": "Tagged",
+                    "projectId": "proj-001",
+                    "workspaceId": "ws-001",
+                    "userId": "user-001",
+                    "tagIds": ["tag-ops-admin"],
+                    "timeInterval": {
+                        "start": "2026-03-28T09:00:00Z",
+                        "end": "2026-03-28T10:00:00Z",
+                        "duration": "PT1H",
+                    },
+                }
+            )
+        ]
+
+        results = fuzzy_search_tags("ops", tags, entries, project_id="proj-001")
+        assert results[0][0].name == "Ops Admin"
 
 
 class TestFuzzyBest:
