@@ -275,7 +275,7 @@ clocky-cli/
 ├── check.sh             # Format → lint → typecheck → test
 ├── install.sh           # One-step global installer
 ├── pyproject.toml
-├── AGENTS.md            # Agent/AI workflow instructions
+├── AGENTS.md           # Agent/AI workflow and coding practices
 └── README.md
 ```
 

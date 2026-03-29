@@ -25,5 +25,4 @@ clocky is a CLI for [Clockify](https://clockify.me) with fuzzy search, auto-tagg
 ## Related files
 
 - [README.md](../README.md) — project overview and quick start
-- [AGENTS.md](../AGENTS.md) — agent/AI workflow instructions
-- [SYSTEM.md](../SYSTEM.md) — stack and coding practices
+- [AGENTS.md](../AGENTS.md) — agent/AI workflow and coding practices
