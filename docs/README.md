@@ -1,5 +1,5 @@
 ---
-description: Documentation index for clocky-cli v2.3.0.
+description: Documentation index for clocky-cli v2.4.0.
 ---
 
 # clocky-cli Documentation

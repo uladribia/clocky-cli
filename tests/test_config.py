@@ -11,10 +11,12 @@ from pydantic import ValidationError
 
 from clocky.config import (
     CLOCKIFY_API_KEY_URL,
+    ConfigurationLoadError,
     Settings,
     _find_env_file,
     _open_browser,
     load_settings,
+    load_settings_or_raise,
 )
 
 
@@ -193,5 +195,17 @@ class TestLoadSettings:
         try:
             settings = load_settings()
             assert settings.clockify_api_key == "valid-key"
+        finally:
+            os.chdir(original)
+
+    def test_load_settings_or_raise_exposes_env_path(self, tmp_path: Path) -> None:
+        (tmp_path / ".env").write_text("CLOCKIFY_API_KEY=your_api_key_here\n")
+        original = Path.cwd()
+        os.chdir(tmp_path)
+        try:
+            with pytest.raises(ConfigurationLoadError) as exc:
+                load_settings_or_raise()
+            assert exc.value.env_path == tmp_path / ".env"
+            assert exc.value.file_exists is True
         finally:
             os.chdir(original)

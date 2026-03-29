@@ -12,13 +12,9 @@ from typing import TYPE_CHECKING, Any
 import questionary
 import typer
 
+from clocky.cli_helpers.selection import fuzzy_choices
 from clocky.context import build_context
-from clocky.fuzzy import (
-    SEARCH_HISTORY_LIMIT,
-    fuzzy_choices,
-    fuzzy_search_projects,
-    fuzzy_search_tags,
-)
+from clocky.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search_projects, fuzzy_search_tags
 from clocky.tag_map import TagMap, tag_map_path
 
 if TYPE_CHECKING:
@@ -39,6 +35,31 @@ def _name_for_id(items: list[Any], id_: str) -> str:
     return next((x.name for x in items if x.id == id_), id_)
 
 
+def _load_json_object(text: str) -> dict[str, str]:
+    """Parse edited tag-map JSON into a normalised string-to-string mapping."""
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(f"Invalid JSON: {exc}") from exc
+
+    if not isinstance(data, dict):
+        raise typer.BadParameter("Tag map must be a JSON object (project_id -> tag_id)")
+
+    return {str(key): str(value) for key, value in data.items()}
+
+
+def _resolve_mapping_names(
+    mapping: dict[str, str],
+    projects: dict[str, str],
+    tags: dict[str, str],
+) -> dict[str, str]:
+    """Resolve persisted project/tag IDs to human-readable names."""
+    return {
+        projects.get(project_id, project_id): tags.get(tag_id, tag_id)
+        for project_id, tag_id in mapping.items()
+    }
+
+
 def register(app: typer.Typer, console: Console) -> None:
     """Register tag-map subcommands.
 
@@ -57,15 +78,12 @@ def register(app: typer.Typer, console: Console) -> None:
         The underlying file stores IDs, but this output resolves them to
         names for readability.
         """
-        ctx = build_context()
-        projects = {p.id: p.name for p in ctx.api.get_projects(ctx.workspace_id)}
-        tags = {t.id: t.name for t in ctx.api.get_tags(ctx.workspace_id)}
+        with build_context() as ctx:
+            projects = {p.id: p.name for p in ctx.api.get_projects(ctx.workspace_id)}
+            tags = {t.id: t.name for t in ctx.api.get_tags(ctx.workspace_id)}
 
         mapping = TagMap.load().project_to_tag
-        resolved = {
-            projects.get(project_id, project_id): tags.get(tag_id, tag_id)
-            for project_id, tag_id in mapping.items()
-        }
+        resolved = _resolve_mapping_names(mapping, projects, tags)
 
         console.print(json.dumps(resolved, indent=2, sort_keys=True, ensure_ascii=False))
         console.print(f"\n[dim]Path:[/dim] {tag_map_path()}")
@@ -82,15 +100,7 @@ def register(app: typer.Typer, console: Console) -> None:
         if edited is None:
             return
 
-        try:
-            data = json.loads(edited)
-        except json.JSONDecodeError as e:
-            raise typer.BadParameter(f"Invalid JSON: {e}") from e
-
-        if not isinstance(data, dict):
-            raise typer.BadParameter("Tag map must be a JSON object (project_id -> tag_id)")
-
-        TagMap(project_to_tag={str(k): str(v) for k, v in data.items()}).save()
+        TagMap(project_to_tag=_load_json_object(edited)).save()
         console.print("[green]Saved.[/green]")
 
     @tag_app.command("set")
@@ -102,9 +112,9 @@ def register(app: typer.Typer, console: Console) -> None:
         """
         TagMap.load().set(project_id, tag_id).save()
 
-        ctx = build_context()
-        projects = ctx.api.get_projects(ctx.workspace_id)
-        tags = ctx.api.get_tags(ctx.workspace_id)
+        with build_context() as ctx:
+            projects = ctx.api.get_projects(ctx.workspace_id)
+            tags = ctx.api.get_tags(ctx.workspace_id)
         project_name = _name_for_id(projects, project_id)
         tag_name = _name_for_id(tags, tag_id)
 
@@ -116,15 +126,14 @@ def register(app: typer.Typer, console: Console) -> None:
 
         Uses fuzzy search + an interactive picker.
         """
-        ctx = build_context()
-
-        projects = ctx.api.get_projects(ctx.workspace_id)
-        tags = ctx.api.get_tags(ctx.workspace_id)
-        recent_entries = ctx.api.get_time_entries(
-            ctx.workspace_id,
-            ctx.user.id,
-            limit=SEARCH_HISTORY_LIMIT,
-        )
+        with build_context() as ctx:
+            projects = ctx.api.get_projects(ctx.workspace_id)
+            tags = ctx.api.get_tags(ctx.workspace_id)
+            recent_entries = ctx.api.get_time_entries(
+                ctx.workspace_id,
+                ctx.user.id,
+                limit=SEARCH_HISTORY_LIMIT,
+            )
 
         project_query = typer.prompt("Project (fuzzy)").strip()
         project_matches = fuzzy_search_projects(project_query, projects, recent_entries)
@@ -162,8 +171,8 @@ def register(app: typer.Typer, console: Console) -> None:
             console.print("[dim]No mapping for that project id.[/dim]")
             return
 
-        ctx = build_context()
-        projects = ctx.api.get_projects(ctx.workspace_id)
+        with build_context() as ctx:
+            projects = ctx.api.get_projects(ctx.workspace_id)
         project_name = _name_for_id(projects, project_id)
 
         mapping.pop(project_id)

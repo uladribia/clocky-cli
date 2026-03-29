@@ -20,14 +20,14 @@ from clocky.output import get_mode
 from clocky.tag_map import TagMap
 
 if TYPE_CHECKING:
-    from clocky.api import ClockifyAPI
+    from clocky.gateway import ClockifyGateway
 
 _no_color = bool(__import__("os").environ.get("NO_COLOR"))
 console = Console(no_color=_no_color)
 
 
 def infer_tag_for_project(
-    api: ClockifyAPI,
+    api: ClockifyGateway,
     workspace_id: str,
     user_id: str,
     project_id: str,
@@ -68,7 +68,7 @@ def infer_tag_for_project(
 
 
 def resolve_tag_ids(
-    api: ClockifyAPI,
+    api: ClockifyGateway,
     workspace_id: str,
     user_id: str,
     project_id: str,

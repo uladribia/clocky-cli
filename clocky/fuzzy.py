@@ -12,7 +12,6 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-import questionary
 from rapidfuzz import fuzz
 
 from clocky.models import Project, Tag, TimeEntry
@@ -357,26 +356,6 @@ def fuzzy_best[T](
     """
     results = fuzzy_search(query, items, key, cutoff=cutoff, limit=1)
     return results[0][0] if results else None
-
-
-def fuzzy_choices[T](
-    matches: list[tuple[T, float]],
-    attr: str = "name",
-) -> list[questionary.Choice]:
-    """Build a questionary Choice list from fuzzy match results.
-
-    Args:
-        matches: List of ``(item, score)`` tuples from a fuzzy search.
-        attr: Attribute name to use as the choice label.
-
-    Returns:
-        Choice objects annotated with the weighted match percentage.
-
-    """
-    return [
-        questionary.Choice(f"{getattr(item, attr)} ({score:.0f}%)", value=item)
-        for item, score in matches
-    ]
 
 
 def _score_project_match(query_norm: str, project: Project, usage: UsageStats) -> ScoreDetails:

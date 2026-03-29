@@ -8,10 +8,17 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
-from clocky.integration_smoke import (
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from clocky.integration_smoke import (  # noqa: E402
     DEFAULT_CASES,
     DEFAULT_HISTORY_LIMIT,
+    build_smoke_plan,
+    render_smoke_plan,
     run_integration_smoke,
 )
 
@@ -29,7 +36,12 @@ def _parse_args() -> argparse.Namespace:
         "--history-limit",
         type=int,
         default=DEFAULT_HISTORY_LIMIT,
-        help="Number of recent time entries to inspect for project selection.",
+        help="Reserved for compatibility; planning is log-driven.",
+    )
+    parser.add_argument(
+        "--plan",
+        action="store_true",
+        help="Print the selected smoke plan and exit.",
     )
     return parser.parse_args()
 
@@ -40,6 +52,10 @@ def main() -> None:
     cases = args.case or list(DEFAULT_CASES)
 
     try:
+        if args.plan:
+            sys.stdout.write(render_smoke_plan(build_smoke_plan()))
+            sys.exit(0)
+
         exit_code = run_integration_smoke(cases, args.history_limit)
     except RuntimeError as exc:
         sys.stderr.write(f"clocky integration: {exc}\n")

@@ -16,6 +16,7 @@ import pytest
 
 from clocky.api import ClockifyAPI
 from clocky.models import StartTimerRequest, StopTimerRequest
+from clocky.smoke_planner import DEFAULT_START_STOP_PROJECT
 
 # Skip by default — run explicitly with: pytest tests/test_integration.py
 pytestmark = pytest.mark.skipif(
@@ -64,13 +65,19 @@ class TestRealAPI:
 
         This test is idempotent — it cleans up after itself.
         """
-        # Find the Cross-selling project
+        # Find the default Dribia smoke project.
         projects = api.get_projects(workspace_id)
         cross_selling = next(
-            (p for p in projects if p.name == "Cross-selling" and p.client_name == "Dribia"),
+            (
+                p
+                for p in projects
+                if p.name == DEFAULT_START_STOP_PROJECT and p.client_name == "Dribia"
+            ),
             None,
         )
-        assert cross_selling is not None, "Project 'Cross-selling' for 'Dribia' not found"
+        assert cross_selling is not None, (
+            f"Project '{DEFAULT_START_STOP_PROJECT}' for 'Dribia' not found"
+        )
 
         # Find the Comercial tag
         tags = api.get_tags(workspace_id)
