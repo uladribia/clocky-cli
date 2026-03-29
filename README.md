@@ -31,7 +31,7 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 
 ## Installation
 
-> Version: **v2.3.0**
+> Version: **v2.4.0**
 
 ### 1. Clone the repository
 
@@ -262,14 +262,17 @@ clocky-cli/
 │   ├── cli.py           # Typer CLI commands
 │   ├── cli_tag_map.py   # Tag-map subcommands
 │   ├── config.py        # Settings via pydantic-settings + .env
-│   ├── context.py       # AppContext (user + workspace resolution)
+│   ├── context.py       # AppContext lifecycle + workspace resolution
 │   ├── display.py       # Rich-based terminal output
-│   ├── fuzzy.py         # rapidfuzz search utilities
+│   ├── fuzzy.py         # rapidfuzz ranking utilities
+│   ├── gateway.py       # Protocol boundary for Clockify access
 │   ├── models.py        # Pydantic data models
 │   ├── output.py        # JSON output and mode state
+│   ├── services/        # Timer/project application services
 │   ├── setup.py         # Interactive setup wizard
+│   ├── smoke_planner.py # Log-driven integration smoke planning
 │   ├── tag_map.py       # Persistent project→tag mapping
-│   └── testing.py       # Mock API for offline tests
+│   └── testing.py       # Offline fake API for tests
 ├── launchers/           # Ubuntu .desktop files and shell scripts
 ├── tests/               # pytest test suite
 ├── check.sh             # Format → lint → typecheck → test
@@ -291,13 +294,22 @@ Runs: `ruff format .` → `ruff check . --fix` → `ty check .` → `pytest`
 
 ### Integration smoke tests
 
+Smoke planning is log-driven: the script inspects recent launcher/CLI logs for
+representative Dribia commands, then falls back to stable defaults such as
+`Cross-selling` and `Brokerages`.
+
 ```bash
+clocky integration-test --plan
 clocky integration-test
 ```
 
 ```bash
+uv run python scripts/integration_smoke.py --plan
 uv run python scripts/integration_smoke.py
 ```
+
+The script is self-bootstrapping inside the repo and the smoke runner defaults
+to `python -m clocky.cli` for reliable local execution.
 
 ---
 

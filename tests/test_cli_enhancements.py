@@ -6,12 +6,14 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
 import clocky.cli as cli
 from clocky.context import AppContext
+from clocky.smoke_planner import RepresentativeCommand, SmokePlan
 from clocky.testing import MOCK_TIME_ENTRIES, MockClockifyAPI
 
 
@@ -175,6 +177,34 @@ class TestExitCodes:
         monkeypatch.setattr(cli, "build_context", lambda: ctx)
         result = runner.invoke(cli.app, ["start", "zzzznonexistent", "--non-interactive"])
         assert result.exit_code == 2
+
+
+class TestIntegrationPlan:
+    def test_integration_test_plan_json(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        plan = SmokePlan(
+            start_stop_project="Cross-selling",
+            missing_tag_project="Brokerages",
+            representatives={
+                "start_stop": [
+                    RepresentativeCommand(
+                        case_name="start_stop",
+                        command='clocky start --non-interactive "Cros-seling"',
+                        project_name="Cross-selling",
+                        source_path=Path("logs/launcher.log"),
+                    )
+                ]
+            },
+            fallback_cases=(),
+            log_paths=(Path("logs/launcher.log"),),
+        )
+        monkeypatch.setattr(cli, "build_smoke_plan", lambda: plan)
+        result = runner.invoke(cli.app, ["--json", "integration-test", "--plan"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["start_stop_project"] == "Cross-selling"
+        assert data["missing_tag_project"] == "Brokerages"
 
 
 class TestNoColor:

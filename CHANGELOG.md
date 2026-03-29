@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.4.0 - 2026-03-29
+
+### Added
+- Protocol- and service-based architecture boundaries for timer and project workflows.
+- Log-driven smoke planning plus runtime validation for `missing_tag` candidates.
+- API contract tests, service-layer tests, launcher script tests, setup tests, and entrypoint tests.
+
+### Changed
+- `integration-test` now defaults to `python -m clocky.cli` for more reliable local execution.
+- `scripts/integration_smoke.py` now bootstraps the repo path when run directly from the checkout.
+- Setup/config logic is split into purer helpers, and `tag-map` commands have clearer parsing helpers.
+
+### Fixed
+- Full-duration parsing in the stop launcher notification flow.
+- Live smoke failures caused by stale log-derived `missing_tag` candidates.
+
 ## 2.3.0 - 2026-03-29
 
 ### Added

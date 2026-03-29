@@ -11,9 +11,27 @@ from typing import TypeVar
 
 import questionary
 
-from clocky.fuzzy import fuzzy_choices
-
 T = TypeVar("T")
+
+
+def fuzzy_choices[T](
+    matches: list[tuple[T, float]],
+    attr: str = "name",
+) -> list[questionary.Choice]:
+    """Build prompt choices from ranked fuzzy matches.
+
+    Args:
+        matches: Ranked ``(item, score)`` tuples.
+        attr: Attribute name used as the display label.
+
+    Returns:
+        Questionary choices annotated with percentage scores.
+
+    """
+    return [
+        questionary.Choice(f"{getattr(item, attr)} ({score:.0f}%)", value=item)
+        for item, score in matches
+    ]
 
 
 def pick_one[T](

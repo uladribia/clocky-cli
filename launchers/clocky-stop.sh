@@ -41,7 +41,7 @@ clocky_log "clocky stop output: $OUTPUT"
 
 # Extract duration from output
 if echo "$OUTPUT" | grep -q "Duration:"; then
-    DURATION=$(echo "$OUTPUT" | grep -oP 'Duration: \K[^\s]+' | head -1)
+    DURATION=$(echo "$OUTPUT" | sed -n 's/.*Duration:[[:space:]]*//p' | head -1)
     notify "Timer stopped\nDuration: $DURATION"
 else
     notify "Timer stopped"

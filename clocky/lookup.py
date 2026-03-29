@@ -6,13 +6,10 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from clocky.api import ClockifyAPI
+from clocky.gateway import ClockifyGateway
 
 
-def build_project_map(api: ClockifyAPI, workspace_id: str) -> dict[str, str]:
+def build_project_map(api: ClockifyGateway, workspace_id: str) -> dict[str, str]:
     """Build a project ID to name mapping.
 
     Args:
@@ -26,7 +23,7 @@ def build_project_map(api: ClockifyAPI, workspace_id: str) -> dict[str, str]:
     return {p.id: p.name for p in api.get_projects(workspace_id)}
 
 
-def build_tag_map(api: ClockifyAPI, workspace_id: str) -> dict[str, str]:
+def build_tag_map(api: ClockifyGateway, workspace_id: str) -> dict[str, str]:
     """Build a tag ID to name mapping.
 
     Args:

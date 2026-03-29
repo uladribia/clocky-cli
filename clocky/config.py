@@ -7,10 +7,11 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
-from pydantic import field_validator
+from pydantic import ValidationError, field_validator
 from pydantic_settings import BaseSettings
 from rich.panel import Panel
 from rich.prompt import Confirm
@@ -19,7 +20,22 @@ import clocky.console as console_module
 from clocky.browser import CLOCKIFY_API_KEY_URL
 from clocky.browser import open_browser as _open_browser
 
-__all__ = ["CLOCKIFY_API_KEY_URL", "_open_browser", "Settings", "load_settings"]
+__all__ = [
+    "CLOCKIFY_API_KEY_URL",
+    "ConfigurationLoadError",
+    "Settings",
+    "_open_browser",
+    "load_settings",
+    "load_settings_or_raise",
+]
+
+
+@dataclass(frozen=True)
+class ConfigurationLoadError(Exception):
+    """Raised when settings cannot be loaded from the environment."""
+
+    env_path: Path
+    file_exists: bool
 
 
 def _find_env_file() -> Path:
@@ -112,8 +128,8 @@ class Settings(BaseSettings):
         return v
 
 
-def load_settings() -> Settings:
-    """Load settings from .env, with helpful guidance on failure."""
+def load_settings_or_raise() -> Settings:
+    """Load settings or raise a structured configuration error."""
     env_path = _find_env_file()
 
     if env_path.exists():
@@ -121,6 +137,14 @@ def load_settings() -> Settings:
 
     try:
         return Settings(_env_file=env_path)  # type: ignore[call-arg]
-    except Exception:
-        _show_setup_guide(env_path, file_exists=env_path.exists())
+    except ValidationError as exc:
+        raise ConfigurationLoadError(env_path=env_path, file_exists=env_path.exists()) from exc
+
+
+def load_settings() -> Settings:
+    """Load settings from .env, with helpful guidance on failure."""
+    try:
+        return load_settings_or_raise()
+    except ConfigurationLoadError as exc:
+        _show_setup_guide(exc.env_path, file_exists=exc.file_exists)
         sys.exit(1)

@@ -6,9 +6,11 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import TracebackType
 
 from clocky.api import ClockifyAPI
 from clocky.config import load_settings
+from clocky.gateway import ClockifyGateway
 from clocky.models import User
 
 
@@ -16,9 +18,27 @@ from clocky.models import User
 class AppContext:
     """Holds API client, user, and workspace ID for the session."""
 
-    api: ClockifyAPI
+    api: ClockifyGateway
     user: User
     workspace_id: str
+
+    def close(self) -> None:
+        """Close the underlying API client."""
+        self.api.close()
+
+    def __enter__(self) -> AppContext:
+        """Return the active context manager instance."""
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        """Ensure the API client is closed after use."""
+        del exc_type, exc, tb
+        self.close()
 
 
 def build_context() -> AppContext:

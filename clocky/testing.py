@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from clocky.api import ClockifyAPI
 from clocky.models import (
     Client,
     Project,
@@ -126,8 +125,8 @@ MOCK_TIME_ENTRIES = [
 # -----------------------------------------------------------------------------
 
 
-class MockClockifyAPI(ClockifyAPI):
-    """Offline mock of ClockifyAPI for testing. Returns fixture data, no network calls."""
+class MockClockifyAPI:
+    """Offline Clockify gateway for testing. Returns fixture data, no network calls."""
 
     def __init__(
         self,

@@ -15,8 +15,6 @@ from typing import Annotated
 import typer
 
 from clocky.api import ClockifyAPIError
-from clocky.cli_helpers.selection import pick_one
-from clocky.cli_helpers.tagging import resolve_tag_ids
 from clocky.console import console
 from clocky.context import build_context
 from clocky.display import (
@@ -28,11 +26,24 @@ from clocky.display import (
     print_time_entries,
     print_timer_stopped,
 )
-from clocky.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search, fuzzy_search_projects
-from clocky.integration_smoke import DEFAULT_CASES, DEFAULT_HISTORY_LIMIT, run_integration_smoke
-from clocky.lookup import build_project_map, build_tag_map, resolve_project_name, resolve_tag_names
-from clocky.models import StartTimerRequest, StopTimerRequest
+from clocky.integration_smoke import (
+    DEFAULT_CASES,
+    DEFAULT_HISTORY_LIMIT,
+    build_smoke_plan,
+    render_smoke_plan,
+    run_integration_smoke,
+    smoke_plan_to_dict,
+)
 from clocky.output import emit_json, get_mode, set_mode, time_entry_to_dict
+from clocky.services.errors import ServiceUsageError
+from clocky.services.projects import list_projects
+from clocky.services.timers import (
+    delete_time_entry,
+    get_status_data,
+    list_time_entries,
+    start_timer,
+    stop_timer,
+)
 
 app = typer.Typer(
     name="clocky",
@@ -79,16 +90,6 @@ def _main_options(
 # Subcommands are registered below (see clocky.cli_tag_map).
 
 # -----------------------------------------------------------------------------
-# Helpers
-# -----------------------------------------------------------------------------
-
-
-def _now_utc() -> str:
-    """Return current UTC time as ISO string."""
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-# -----------------------------------------------------------------------------
 # Commands
 # -----------------------------------------------------------------------------
 
@@ -111,9 +112,13 @@ def integration_test(
         int,
         typer.Option(
             "--history-limit",
-            help="Number of recent time entries to inspect for project selection.",
+            help="Reserved for compatibility; planning is log-driven.",
         ),
     ] = DEFAULT_HISTORY_LIMIT,
+    plan: Annotated[
+        bool,
+        typer.Option("--plan", help="Print the selected smoke plan and exit."),
+    ] = False,
 ) -> None:
     """Run real integration smoke tests against Clockify."""
     cases = case or list(DEFAULT_CASES)
@@ -122,13 +127,15 @@ def integration_test(
         raise typer.BadParameter(f"Unknown case(s): {', '.join(unknown)}")
 
     if "CLOCKY_INTEGRATION_CLI" not in os.environ:
-        argv0 = sys.argv[0]
-        if os.path.basename(argv0) in {"clocky", "clocky.exe"}:
-            os.environ["CLOCKY_INTEGRATION_CLI"] = argv0
+        os.environ["CLOCKY_INTEGRATION_CLI"] = f"{sys.executable} -m clocky.cli"
+
+    if plan:
+        smoke_plan = build_smoke_plan()
+        if get_mode().json:
+            emit_json(smoke_plan_to_dict(smoke_plan))
         else:
-            os.environ["CLOCKY_INTEGRATION_CLI"] = (
-                f'{sys.executable} -c "from clocky.cli import main; main()"'
-            )
+            sys.stdout.write(render_smoke_plan(smoke_plan))
+        raise typer.Exit(0)
 
     try:
         exit_code = run_integration_smoke(cases, history_limit)
@@ -143,28 +150,27 @@ def integration_test(
 def status() -> None:
     """Show the currently running timer."""
     mode = get_mode()
-    ctx = build_context()
-    entry = ctx.api.get_running_timer(ctx.workspace_id, ctx.user.id)
+    with build_context() as ctx:
+        data = get_status_data(ctx)
 
-    if not entry:
+    if not data.entry:
         if mode.json:
             emit_json(None)
             return
         print_no_timer()
         return
 
-    project_name = None
-    if entry.project_id:
-        project_map = build_project_map(ctx.api, ctx.workspace_id)
-        project_name = resolve_project_name(project_map, entry.project_id)
-
     if mode.json:
-        tag_map = build_tag_map(ctx.api, ctx.workspace_id)
-        tag_names = resolve_tag_names(tag_map, entry.tag_ids)
-        emit_json(time_entry_to_dict(entry, project_name=project_name, tag_names=tag_names))
+        emit_json(
+            time_entry_to_dict(
+                data.entry,
+                project_name=data.project_name,
+                tag_names=data.tag_names,
+            )
+        )
         return
 
-    print_status(entry, project_name)
+    print_status(data.entry, data.project_name)
 
 
 @app.command()
@@ -189,86 +195,64 @@ def start(
 ) -> None:
     """Start a new timer."""
     mode = get_mode()
-    ctx = build_context()
+    with build_context() as ctx:
+        try:
+            data = start_timer(
+                ctx,
+                project,
+                description,
+                tags,
+                auto_tag=auto_tag,
+                non_interactive=non_interactive,
+                dry_run=dry_run,
+            )
+        except ServiceUsageError as exc:
+            print_error(f"clocky: {exc}")
+            raise typer.Exit(2) from None
+        except ClockifyAPIError as exc:
+            print_error(f"clocky: {exc}")
+            raise typer.Exit(1) from None
 
-    all_projects = ctx.api.get_projects(ctx.workspace_id)
-    recent_entries = ctx.api.get_time_entries(
-        ctx.workspace_id,
-        ctx.user.id,
-        limit=SEARCH_HISTORY_LIMIT,
-    )
-    matches = fuzzy_search_projects(project, all_projects, recent_entries)
-    if not matches:
-        print_error(f"clocky: No projects matching '{project}'")
-        raise typer.Exit(2)
-    chosen = pick_one(matches, "name", non_interactive=non_interactive)
-    if not chosen:
+    if data is None:
         raise typer.Exit(0)
 
     if not mode.quiet:
-        console.print(f"[dim]Project:[/dim] [cyan]{chosen.name}[/cyan]")
+        console.print(f"[dim]Project:[/dim] [cyan]{data.project.name}[/cyan]")
+        if data.stopped_previous:
+            console.print("[dim]Stopped previous timer.[/dim]")
 
-    all_tags = ctx.api.get_tags(ctx.workspace_id)
-    tag_ids = resolve_tag_ids(
-        ctx.api,
-        ctx.workspace_id,
-        ctx.user.id,
-        chosen.id,
-        chosen.name,
-        tags,
-        all_tags,
-        auto_tag=auto_tag,
-        non_interactive=non_interactive,
-        recent_entries=recent_entries,
-    )
-
-    tag_map = {t.id: t.name for t in all_tags}
-    tag_names = resolve_tag_names(tag_map, tag_ids)
-
-    if dry_run:
+    if data.dry_run:
         result = {
             "dry_run": True,
-            "project": chosen.name,
-            "project_id": chosen.id,
-            "description": description,
-            "tag_ids": tag_ids,
-            "tag_names": tag_names,
+            "project": data.project.name,
+            "project_id": data.project.id,
+            "description": data.description,
+            "tag_ids": data.tag_ids,
+            "tag_names": data.tag_names,
         }
         if mode.json:
             emit_json(result)
         else:
             console.print("\n[bold yellow]Dry run[/bold yellow] — no timer started.")
-            console.print(f"  Project:     [cyan]{chosen.name}[/cyan]")
+            console.print(f"  Project:     [cyan]{data.project.name}[/cyan]")
             console.print(f"  Description: {description or '[dim]—[/dim]'}")
-            tags_str = ", ".join(tag_names) if tag_names else "[dim]—[/dim]"
+            tags_str = ", ".join(data.tag_names) if data.tag_names else "[dim]—[/dim]"
             console.print(f"  Tags:        [magenta]{tags_str}[/magenta]\n")
         return
 
-    # Stop any running timer before starting a new one.
-    running = ctx.api.get_running_timer(ctx.workspace_id, ctx.user.id)
-    if running:
-        ctx.api.stop_timer(ctx.workspace_id, ctx.user.id, StopTimerRequest(end=_now_utc()))
-        if not mode.quiet:
-            console.print("[dim]Stopped previous timer.[/dim]")
-
-    request = StartTimerRequest(
-        start=_now_utc(),
-        description=description,
-        project_id=chosen.id,
-        tag_ids=tag_ids,
-    )
-    try:
-        entry = ctx.api.start_timer(ctx.workspace_id, request)
-    except ClockifyAPIError as exc:
-        print_error(f"clocky: {exc}")
-        raise typer.Exit(1) from None
-
+    assert data.entry is not None
     if mode.json:
-        emit_json(time_entry_to_dict(entry, project_name=chosen.name, tag_names=tag_names))
+        emit_json(
+            time_entry_to_dict(
+                data.entry,
+                project_name=data.project.name,
+                tag_names=data.tag_names,
+            )
+        )
         return
 
     msg = f"Timer started{f' — {description}' if description else ''}"
-    print_success(f"{msg}  [dim](id: {entry.id})[/dim]")
+    print_success(f"{msg}  [dim](id: {data.entry.id})[/dim]")
 
 
 @app.command()
@@ -280,42 +264,54 @@ def stop(
 ) -> None:
     """Stop the currently running timer (if any)."""
     mode = get_mode()
-    ctx = build_context()
-    running = ctx.api.get_running_timer(ctx.workspace_id, ctx.user.id)
+    with build_context() as ctx:
+        status_data = get_status_data(ctx)
+        if not status_data.entry:
+            if mode.json:
+                emit_json(None)
+                return
+            print_no_timer()
+            return
 
-    if not running:
+        elapsed = datetime.now(UTC) - (
+            status_data.entry.time_interval.start
+            if status_data.entry.time_interval.start.tzinfo
+            else status_data.entry.time_interval.start.replace(tzinfo=UTC)
+        )
+        if (
+            elapsed.total_seconds() > 8 * 3600
+            and not force
+            and sys.stdin.isatty()
+            and not mode.quiet
+        ):
+            from clocky.display import format_duration
+
+            confirm = typer.confirm(
+                f"Timer has been running for {format_duration(elapsed)}. Stop it?"
+            )
+            if not confirm:
+                raise typer.Exit(0)
+
+        data = stop_timer(ctx)
+
+    if data.entry is None:
         if mode.json:
             emit_json(None)
             return
         print_no_timer()
         return
 
-    # Warn on long-running timers (>8h) when interactive
-    elapsed = datetime.now(UTC) - (
-        running.time_interval.start
-        if running.time_interval.start.tzinfo
-        else running.time_interval.start.replace(tzinfo=UTC)
-    )
-    if elapsed.total_seconds() > 8 * 3600 and not force and sys.stdin.isatty() and not mode.quiet:
-        from clocky.display import format_duration
-
-        confirm = typer.confirm(f"Timer has been running for {format_duration(elapsed)}. Stop it?")
-        if not confirm:
-            raise typer.Exit(0)
-
-    entry = ctx.api.stop_timer(ctx.workspace_id, ctx.user.id, StopTimerRequest(end=_now_utc()))
-
     if mode.json:
-        project_name = None
-        if entry.project_id:
-            project_map = build_project_map(ctx.api, ctx.workspace_id)
-            project_name = resolve_project_name(project_map, entry.project_id)
-        tag_map = build_tag_map(ctx.api, ctx.workspace_id)
-        tag_names = resolve_tag_names(tag_map, entry.tag_ids)
-        emit_json(time_entry_to_dict(entry, project_name=project_name, tag_names=tag_names))
+        emit_json(
+            time_entry_to_dict(
+                data.entry,
+                project_name=data.project_name,
+                tag_names=data.tag_names,
+            )
+        )
         return
 
-    print_timer_stopped(entry)
+    print_timer_stopped(data.entry)
 
 
 @app.command("list")
@@ -324,24 +320,22 @@ def list_entries(
 ) -> None:
     """List recent time entries."""
     mode = get_mode()
-    ctx = build_context()
-    entries = ctx.api.get_time_entries(ctx.workspace_id, ctx.user.id, limit=limit)
-    project_map = build_project_map(ctx.api, ctx.workspace_id)
-    tag_map = build_tag_map(ctx.api, ctx.workspace_id)
+    with build_context() as ctx:
+        data = list_time_entries(ctx, limit)
 
     if mode.json:
         result = [
             time_entry_to_dict(
-                e,
-                project_name=resolve_project_name(project_map, e.project_id),
-                tag_names=resolve_tag_names(tag_map, e.tag_ids),
+                entry,
+                project_name=data.project_map.get(entry.project_id or ""),
+                tag_names=[data.tag_map.get(tag_id, tag_id) for tag_id in entry.tag_ids],
             )
-            for e in entries
+            for entry in data.entries
         ]
         emit_json(result)
         return
 
-    print_time_entries(entries, project_map, tag_map)
+    print_time_entries(data.entries, data.project_map, data.tag_map)
 
 
 @app.command()
@@ -353,51 +347,31 @@ def projects(
 ) -> None:
     """List projects, optionally filtered by client."""
     mode = get_mode()
-    ctx = build_context()
+    with build_context() as ctx:
+        try:
+            data = list_projects(ctx, client, search)
+        except ServiceUsageError as exc:
+            print_error(f"clocky: {exc}")
+            raise typer.Exit(2) from None
 
-    client_label: str | None = None
-    all_projects = ctx.api.get_projects(ctx.workspace_id)
-
-    if client:
-        clients = ctx.api.get_clients(ctx.workspace_id)
-        client_matches = fuzzy_search(client, clients, key=lambda c: c.name)
-        if not client_matches:
-            print_error(f"clocky: No clients matching '{client}'")
-            raise typer.Exit(2)
-        chosen_client = pick_one(client_matches, "name")
-        if not chosen_client:
-            raise typer.Exit(0)
-
-        client_label = chosen_client.name
-        all_projects = [p for p in all_projects if p.client_id == chosen_client.id]
-
-    if search:
-        recent_entries = ctx.api.get_time_entries(
-            ctx.workspace_id,
-            ctx.user.id,
-            limit=SEARCH_HISTORY_LIMIT,
-        )
-        proj_matches = fuzzy_search_projects(search, all_projects, recent_entries)
-        if not proj_matches:
-            print_error(f"clocky: No projects matching '{search}'")
-            raise typer.Exit(2)
-        all_projects = [p for p, _ in proj_matches]
+    if data is None:
+        raise typer.Exit(0)
 
     if mode.json:
         result = [
             {
-                "id": p.id,
-                "name": p.name,
-                "client_id": p.client_id,
-                "client_name": p.client_name,
-                "archived": p.archived,
+                "id": project.id,
+                "name": project.name,
+                "client_id": project.client_id,
+                "client_name": project.client_name,
+                "archived": project.archived,
             }
-            for p in all_projects
+            for project in data.projects
         ]
         emit_json(result)
         return
 
-    print_projects(all_projects, client_filter=client_label)
+    print_projects(data.projects, client_filter=data.client_label)
 
 
 @app.command()
@@ -410,21 +384,20 @@ def delete(
 ) -> None:
     """Delete a time entry by ID."""
     mode = get_mode()
-    ctx = build_context()
+    with build_context() as ctx:
+        if not force and sys.stdin.isatty() and not mode.quiet:
+            confirm = typer.confirm(f"Delete time entry {entry_id}?")
+            if not confirm:
+                raise typer.Exit(0)
 
-    if not force and sys.stdin.isatty() and not mode.quiet:
-        confirm = typer.confirm(f"Delete time entry {entry_id}?")
-        if not confirm:
-            raise typer.Exit(0)
-
-    ctx.api.delete_time_entry(ctx.workspace_id, entry_id)
+        data = delete_time_entry(ctx, entry_id)
 
     if mode.json:
-        emit_json({"deleted": entry_id})
+        emit_json({"deleted": data.entry_id})
         return
 
     if not mode.quiet:
-        print_success(f"Deleted entry [dim]{entry_id}[/dim]")
+        print_success(f"Deleted entry [dim]{data.entry_id}[/dim]")
 
 
 # Register subcommands at import time so they also appear in `--help`.

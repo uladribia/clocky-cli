@@ -100,7 +100,8 @@ Run real integration smoke tests against Clockify.
 | Option | Description |
 |--------|-------------|
 | `--case` | Case to run (repeatable). Defaults to all cases. |
-| `--history-limit` | Number of recent entries to inspect for project selection. |
+| `--history-limit` | Reserved for compatibility; planning is log-driven. |
+| `--plan` | Print the selected smoke plan and exit. |
 
 See [integration-tests.md](integration-tests.md) for full details.
 

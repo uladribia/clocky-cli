@@ -11,12 +11,16 @@ import os
 import shlex
 import subprocess
 import sys
-from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from clocky.context import build_context
-from clocky.tag_map import TagMap
+from clocky.smoke_planner import (
+    DEFAULT_MISSING_TAG_PROJECT,
+    SmokePlan,
+    build_smoke_plan,
+    smoke_plan_to_dict,
+    smoke_plan_to_lines,
+)
 
 DEFAULT_HISTORY_LIMIT = 100
 DEFAULT_LIST_LIMIT = 5
@@ -30,14 +34,6 @@ class CaseResult:
     name: str
     success: bool
     details: str = ""
-
-
-@dataclass(frozen=True)
-class ProjectSelection:
-    """Resolved project names for test cases."""
-
-    start_stop_project: str
-    missing_tag_project: str
 
 
 def cli_base_command() -> list[str]:
@@ -66,112 +62,6 @@ def run_cli(args: list[str]) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         stdin=subprocess.DEVNULL,
         check=False,
-    )
-
-
-def latest_project_candidates(entries: Iterable[object]) -> list[str]:
-    """Return unique project IDs in most-recent-first order.
-
-    Args:
-        entries: TimeEntry objects from the API.
-
-    Returns:
-        List of project IDs ordered by first appearance.
-
-    """
-    seen: set[str] = set()
-    ordered: list[str] = []
-    for entry in entries:
-        project_id = getattr(entry, "project_id", None)
-        if not project_id or project_id in seen:
-            continue
-        seen.add(project_id)
-        ordered.append(project_id)
-    return ordered
-
-
-def select_projects(history_limit: int) -> ProjectSelection:
-    """Select projects for smoke tests using recent usage.
-
-    Args:
-        history_limit: Number of recent entries to inspect.
-
-    Returns:
-        Selected project names for each test case.
-
-    Raises:
-        RuntimeError: When no suitable projects are found.
-
-    """
-    env_start_project = os.environ.get("CLOCKY_TEST_PROJECT")
-    env_missing_tag_project = os.environ.get("CLOCKY_TEST_PROJECT_MISSING_TAG")
-    if env_start_project and env_missing_tag_project:
-        return ProjectSelection(
-            start_stop_project=env_start_project,
-            missing_tag_project=env_missing_tag_project,
-        )
-
-    ctx = build_context()
-    try:
-        projects = {p.id: p for p in ctx.api.get_projects(ctx.workspace_id)}
-        entries = ctx.api.get_time_entries(
-            ctx.workspace_id,
-            ctx.user.id,
-            limit=history_limit,
-        )
-    finally:
-        ctx.api.close()
-
-    if not entries:
-        raise RuntimeError(
-            "No recent entries found. Set CLOCKY_TEST_PROJECT and "
-            "CLOCKY_TEST_PROJECT_MISSING_TAG to run integration tests."
-        )
-
-    tag_map = TagMap.load().project_to_tag
-    projects_with_recent_tags = {
-        entry.project_id for entry in entries if entry.project_id and entry.tag_ids
-    }
-
-    ordered_project_ids = latest_project_candidates(entries)
-
-    def is_usable(project_id: str) -> bool:
-        project = projects.get(project_id)
-        return bool(project) and not project.archived
-
-    start_stop_project: str | None = env_start_project
-    if start_stop_project is None:
-        for project_id in ordered_project_ids:
-            if not is_usable(project_id):
-                continue
-            if project_id in tag_map or project_id in projects_with_recent_tags:
-                start_stop_project = projects[project_id].name
-                break
-
-    missing_tag_project: str | None = env_missing_tag_project
-    if missing_tag_project is None:
-        for project_id in ordered_project_ids:
-            if not is_usable(project_id):
-                continue
-            if project_id in tag_map or project_id in projects_with_recent_tags:
-                continue
-            missing_tag_project = projects[project_id].name
-            break
-
-    if not start_stop_project:
-        raise RuntimeError(
-            "No suitable project found for start/stop smoke test. "
-            "Set CLOCKY_TEST_PROJECT to override selection."
-        )
-    if not missing_tag_project:
-        raise RuntimeError(
-            "No suitable project found for missing-tag smoke test. "
-            "Set CLOCKY_TEST_PROJECT_MISSING_TAG to override selection."
-        )
-
-    return ProjectSelection(
-        start_stop_project=start_stop_project,
-        missing_tag_project=missing_tag_project,
     )
 
 
@@ -246,6 +136,35 @@ def case_start_stop(project_name: str) -> CaseResult:
     return CaseResult(name="start_stop", success=True)
 
 
+def _missing_tag_candidates(plan: SmokePlan) -> list[str]:
+    """Return candidate project names for the missing-tag smoke case."""
+    candidates = [
+        *(command.project_name for command in plan.representatives.get("missing_tag", [])),
+        plan.missing_tag_project,
+        DEFAULT_MISSING_TAG_PROJECT,
+    ]
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        if not candidate or candidate in seen:
+            continue
+        seen.add(candidate)
+        ordered.append(candidate)
+    return ordered
+
+
+def resolve_missing_tag_project(plan: SmokePlan) -> str | None:
+    """Probe candidate projects and return one that still triggers the sentinel.
+
+    The probe uses ``start --dry-run`` to avoid mutating real Clockify state.
+    """
+    for project_name in _missing_tag_candidates(plan):
+        proc = run_cli(["start", "--non-interactive", "--dry-run", project_name])
+        if proc.returncode != 0 and "CLOCKY_ERROR_MISSING_TAG_MAP" in proc.stderr:
+            return project_name
+    return None
+
+
 def case_missing_tag(project_name: str) -> CaseResult:
     """Run missing-tag sentinel test."""
     proc = run_cli(["start", "--non-interactive", project_name])
@@ -285,30 +204,35 @@ def case_status_json() -> CaseResult:
     return CaseResult(name="status_json", success=True)
 
 
-def run_cases(cases: list[str], history_limit: int) -> list[CaseResult]:
+def run_cases(cases: list[str], plan: SmokePlan) -> list[CaseResult]:
     """Run the requested integration cases.
 
     Args:
         cases: Case names to run.
-        history_limit: Time entry history limit for project selection.
+        plan: Selected smoke plan.
 
     Returns:
         List of case results.
 
     """
-    selection: ProjectSelection | None = None
     results: list[CaseResult] = []
 
     for case in cases:
-        if case in {"start_stop", "missing_tag"} and selection is None:
-            selection = select_projects(history_limit)
-
         if case == "start_stop":
-            assert selection is not None
-            results.append(case_start_stop(selection.start_stop_project))
+            results.append(case_start_stop(plan.start_stop_project))
         elif case == "missing_tag":
-            assert selection is not None
-            results.append(case_missing_tag(selection.missing_tag_project))
+            project_name = resolve_missing_tag_project(plan)
+            if project_name is None:
+                checked = ", ".join(_missing_tag_candidates(plan)) or "<none>"
+                results.append(
+                    CaseResult(
+                        name="missing_tag",
+                        success=False,
+                        details=(f"No valid missing-tag smoke candidate found. Checked: {checked}"),
+                    )
+                )
+            else:
+                results.append(case_missing_tag(project_name))
         elif case == "list_entries":
             results.append(case_list_entries())
         elif case == "status_json":
@@ -336,16 +260,35 @@ def report_results(results: list[CaseResult]) -> int:
     return 1 if failed else 0
 
 
+def render_smoke_plan(plan: SmokePlan) -> str:
+    """Return a readable smoke plan summary."""
+    return "\n".join(smoke_plan_to_lines(plan)) + "\n"
+
+
 def run_integration_smoke(cases: list[str], history_limit: int) -> int:
     """Run integration smoke tests and return exit code.
 
     Args:
         cases: Case names to execute.
-        history_limit: Time entry history limit for project selection.
+        history_limit: Kept for CLI compatibility; planning is log-driven.
 
     Returns:
         Exit code suitable for CLI usage.
 
     """
-    results = run_cases(cases, history_limit)
+    del history_limit
+    plan = build_smoke_plan()
+    results = run_cases(cases, plan)
     return report_results(results)
+
+
+__all__ = [
+    "CaseResult",
+    "DEFAULT_CASES",
+    "DEFAULT_HISTORY_LIMIT",
+    "DEFAULT_LIST_LIMIT",
+    "build_smoke_plan",
+    "render_smoke_plan",
+    "run_integration_smoke",
+    "smoke_plan_to_dict",
+]
