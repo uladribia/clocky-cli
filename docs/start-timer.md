@@ -7,21 +7,23 @@ description: How to start a timer with fuzzy search, tags, and dry-run.
 ## TL;DR
 
 ```bash
-clocky start "web redesin"                          # fuzzy match, auto-tag
-clocky start "mobile" --tag "billable" -d "standup"  # explicit tag + description
-clocky start "mobile" --dry-run                      # preview only
+clocky start "web redesin"                            # fuzzy match, auto-tag
+clocky start "mobile" --tag "billable" --description "standup"
+clocky start "mobile" --dry-run                        # preview only
 ```
 
 ## Fuzzy project matching
 
 clocky uses [rapidfuzz](https://github.com/rapidfuzz/RapidFuzz) with a weighted ranking model. Typos, prefixes, token order, and your recent project/tag history all contribute to the final score.
 
+Only **active** projects are considered. Archived projects are excluded from every project search.
+
 ```bash
 clocky start "cros-selling"   # matches "Cross-selling"
 clocky start "web"            # matches "Website Redesign"
 ```
 
-**Multiple matches** → interactive picker (unless `--non-interactive`).
+**Multiple matches** → interactive picker, unless `--non-interactive` is set.
 
 **No matches** → exit code 2.
 
@@ -36,18 +38,13 @@ Tags are resolved in this priority order:
 | 3 | History inference (`--auto-tag`) | Most common tag from last 50 entries |
 | 4 | Interactive prompt | Asked when TTY and no tag found |
 
-If none resolves and `--non-interactive` is set, clocky exits with code 1 and prints `CLOCKY_ERROR_MISSING_TAG_MAP` to stderr (used by launchers).
+If none resolves and `--non-interactive` is set, clocky exits with code 1 and prints `CLOCKY_ERROR_MISSING_TAG_MAP` to stderr.
 
 ### Persist a tag mapping
 
 ```bash
-# Interactive picker
 clocky tag-map pick
-
-# Or let clocky learn: pass --tag once, it saves the mapping
 clocky start "Cross-selling" --tag "Comercial"
-# Next time, just:
-clocky start "Cross-selling"  # uses saved mapping
 ```
 
 See [tag-map.md](tag-map.md) for full details.
@@ -63,14 +60,13 @@ clocky start "mobile" --dry-run
 #   Description: —
 #   Tags:        billable
 
-# JSON dry run
 clocky --json start "mobile" --dry-run --non-interactive
 # {"dry_run": true, "project": "Mobile App", ...}
 ```
 
 ## Non-interactive mode
 
-For scripts and launchers. It uses the same weighted ranking as interactive mode and auto-picks the top result instead of prompting:
+For scripts and launchers. It uses the same weighted ranking as interactive mode and auto-picks the top active project instead of prompting:
 
 ```bash
 clocky start --non-interactive "cros-selling"
@@ -80,12 +76,9 @@ clocky start --non-interactive "cros-selling"
 
 | Option | Short | Default | Description |
 |--------|-------|---------|-------------|
-| `<project>` | | required | Project name (fuzzy) |
+| `<project>` | | required | Active project name (fuzzy) |
 | `--description` | `-d` | `""` | Timer description |
 | `--tag` | `-t` | auto | Tag name(s), repeatable |
 | `--auto-tag / --no-auto-tag` | | `--auto-tag` | Infer from history |
 | `--non-interactive / --interactive` | | `--interactive` | Auto-pick top weighted match |
 | `--dry-run` | | off | Preview without starting |
-|
-ry-run` | | off | Preview without starting |
-|

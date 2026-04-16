@@ -35,12 +35,13 @@ clocky tag-map show
 
 ### `tag-map pick`
 
-Interactive flow: weighted-fuzzy-search a project, then weighted-fuzzy-search a tag, and save:
+Interactive flow: weighted-fuzzy-search an active project, then weighted-fuzzy-search a tag, and save:
 
 ```bash
 clocky tag-map pick
 # Project (fuzzy): cross
 # Pick project: Cross-selling (95%)
+# Archived projects are not shown.
 # Tag for 'Cross-selling' (fuzzy): com
 # Pick tag: Comercial (92%)
 # Mapped Cross-selling → Comercial

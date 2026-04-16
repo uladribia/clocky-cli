@@ -86,7 +86,7 @@ class ClockifyAPI:
     # -------------------------------------------------------------------------
 
     def get_projects(self, workspace_id: str) -> list[Project]:
-        """Fetch all projects in a workspace."""
+        """Fetch all projects in a workspace, including archived ones."""
         return self._get_list(
             f"/workspaces/{workspace_id}/projects", Project, params={"page-size": 500}
         )

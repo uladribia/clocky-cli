@@ -6,7 +6,23 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
+from clocky.domain.models import Project
 from clocky.infra.gateway import ClockifyGateway
+
+
+def filter_active_projects(projects: Iterable[Project]) -> list[Project]:
+    """Return only active projects.
+
+    Args:
+        projects: Projects to filter.
+
+    Returns:
+        Projects whose ``archived`` flag is ``False``.
+
+    """
+    return [project for project in projects if not project.archived]
 
 
 def build_project_map(api: ClockifyGateway, workspace_id: str) -> dict[str, str]:

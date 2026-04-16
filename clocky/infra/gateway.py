@@ -35,7 +35,7 @@ class ClockifyGateway(Protocol):
         """Fetch all workspaces."""
 
     def get_projects(self, workspace_id: str) -> list[Project]:
-        """Fetch workspace projects."""
+        """Fetch workspace projects, including archived ones."""
 
     def get_clients(self, workspace_id: str) -> list[Client]:
         """Fetch workspace clients."""

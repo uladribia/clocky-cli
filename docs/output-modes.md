@@ -27,7 +27,7 @@ clocky --json status | jq '.project_name'
 # List entries and filter
 clocky --json list --limit 5 | jq '.[].description'
 
-# All projects as JSON array
+# All active projects as JSON array
 clocky --json projects
 
 # Start returns the created entry
@@ -56,7 +56,7 @@ clocky --json delete entry-abc --force
 }
 ```
 
-**Project** (used by `projects`):
+**Project** (used by `projects`, which returns active projects only):
 
 ```json
 {
@@ -67,6 +67,8 @@ clocky --json delete entry-abc --force
   "archived": false
 }
 ```
+
+Because archived projects are filtered out, `archived` is always `false` in `clocky --json projects` output.
 
 **Null** — returned by `status` and `stop` when no timer is running.
 

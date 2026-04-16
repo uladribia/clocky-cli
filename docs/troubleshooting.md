@@ -47,7 +47,7 @@ The weighted fuzzy search couldn't find any close matches.
 **Solution**:
 - Double-check spelling.
 - Try a less specific query (e.g., `web` instead of `website redesign`).
-- List all projects/clients: `clocky projects` (for all projects) or `clocky projects "client name"` (for a specific client).
+- List all active projects/clients: `clocky projects` (for all active projects) or `clocky projects "client name"` (for a specific client).
 
 ## Tag mapping issues
 

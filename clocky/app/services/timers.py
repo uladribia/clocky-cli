@@ -16,6 +16,7 @@ from clocky.domain.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search_projects
 from clocky.domain.lookup import (
     build_project_map,
     build_tag_map,
+    filter_active_projects,
     resolve_project_name,
     resolve_tag_names,
 )
@@ -103,7 +104,7 @@ def start_timer(
     non_interactive: bool,
     dry_run: bool,
 ) -> StartTimerData | None:
-    """Resolve and optionally start a timer.
+    """Resolve and optionally start a timer on an active project.
 
     Returns ``None`` when the interactive selector is cancelled.
 
@@ -111,7 +112,7 @@ def start_timer(
         ServiceUsageError: If no project matches the supplied query.
 
     """
-    all_projects = ctx.api.get_projects(ctx.workspace_id)
+    all_projects = filter_active_projects(ctx.api.get_projects(ctx.workspace_id))
     recent_entries = ctx.api.get_time_entries(
         ctx.workspace_id,
         ctx.user.id,

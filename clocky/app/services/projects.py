@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from clocky.app.services.errors import ServiceUsageError
 from clocky.cli_helpers.selection import pick_one
 from clocky.domain.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search, fuzzy_search_projects
+from clocky.domain.lookup import filter_active_projects
 from clocky.domain.models import Project
 from clocky.infra.context import AppContext
 
@@ -26,7 +27,7 @@ class ProjectListData:
 def list_projects(
     ctx: AppContext, client_query: str | None, search_query: str
 ) -> ProjectListData | None:
-    """Resolve filtered project listings.
+    """Resolve filtered active-project listings.
 
     Returns ``None`` when an interactive selector is cancelled.
 
@@ -35,7 +36,7 @@ def list_projects(
 
     """
     client_label: str | None = None
-    projects = ctx.api.get_projects(ctx.workspace_id)
+    projects = filter_active_projects(ctx.api.get_projects(ctx.workspace_id))
 
     if client_query:
         clients = ctx.api.get_clients(ctx.workspace_id)

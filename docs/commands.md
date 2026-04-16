@@ -7,7 +7,7 @@ description: Complete reference for all clocky CLI commands and flags.
 ## TL;DR
 
 ```bash
-clocky start <project>     # start timer
+clocky start <project>     # start timer on an active project
 clocky stop                # stop timer
 clocky status              # show running timer
 clocky list                # recent entries
@@ -31,7 +31,7 @@ clocky integration-test    # real integration smoke tests
 
 ### `start <project>`
 
-Start a timer with weighted fuzzy project matching.
+Start a timer with weighted fuzzy matching against active projects only.
 
 | Option | Short | Default | Description |
 |--------|-------|---------|-------------|
@@ -63,7 +63,7 @@ List recent time entries.
 
 ### `projects [client]`
 
-List projects. Client argument is optional (lists all when omitted).
+List active projects. Client argument is optional (lists all active projects when omitted).
 
 | Option | Short | Description |
 |--------|-------|-------------|

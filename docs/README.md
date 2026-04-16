@@ -6,7 +6,7 @@ description: Documentation index for clocky-cli v2.5.0.
 
 ## TL;DR
 
-clocky is a CLI for [Clockify](https://clockify.me) with fuzzy search, auto-tagging, JSON output, and Ubuntu desktop launchers.
+clocky is a CLI for [Clockify](https://clockify.me) with active-project fuzzy search, auto-tagging, JSON output, and Ubuntu desktop launchers.
 
 ## Docs
 

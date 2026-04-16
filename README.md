@@ -1,17 +1,17 @@
 # clocky-cli
 
-A command-line interface for [Clockify](https://clockify.me) — start/stop timers, browse projects, and view time entries directly from your terminal. Includes Ubuntu desktop launchers to trigger timers from a keyboard shortcut using a small `zenity` GUI flow.
+A command-line interface for [Clockify](https://clockify.me) — start/stop timers, browse active projects, and view time entries directly from your terminal. Includes Ubuntu desktop launchers to trigger timers from a keyboard shortcut using a small `zenity` GUI flow.
 
 ---
 
 ## Features
 
-- **Start a timer** with fuzzy project search — handles typos and partial names
+- **Start a timer** with fuzzy active-project search — handles typos and partial names
 - **Stop** the currently running timer (with safety prompt for long-running timers)
 - **Status** — see what's running and for how long
 - **List** recent time entries in a formatted table
 - **Delete** a time entry by ID (with confirmation)
-- **Browse projects** for a client or list all projects
+- **Browse projects** for a client or list all active projects
 - **`--json` output** for scripting and piping to `jq`
 - **`--quiet` mode** to suppress informational output
 - **`--dry-run`** to preview `start` without creating a timer
@@ -120,8 +120,10 @@ These flags work with any command:
 
 ### Start a timer
 
+clocky only searches active projects. Archived projects are ignored.
+
 ```bash
-# Fuzzy project search (interactive pick list if multiple matches)
+# Fuzzy active-project search (interactive pick list if multiple matches)
 clocky start "web redesin"
 
 # With a description
@@ -170,7 +172,7 @@ clocky --json list | jq '.[].project_name'
 ### Browse projects
 
 ```bash
-# List all projects
+# List all active projects
 clocky projects
 
 # Filter by client (fuzzy)

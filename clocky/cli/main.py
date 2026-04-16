@@ -175,7 +175,7 @@ def status() -> None:
 
 @app.command()
 def start(
-    project: Annotated[str, typer.Argument(..., help="Project name to fuzzy-search")],
+    project: Annotated[str, typer.Argument(..., help="Active project name to fuzzy-search")],
     description: Annotated[str, typer.Option("-d", "--description", help="Description")] = "",
     tags: Annotated[list[str] | None, typer.Option("-t", "--tag", help="Tag name(s)")] = None,
     auto_tag: Annotated[
@@ -193,7 +193,7 @@ def start(
         typer.Option("--dry-run", help="Preview what would happen without starting a timer"),
     ] = False,
 ) -> None:
-    """Start a new timer."""
+    """Start a new timer on an active project."""
     mode = get_mode()
     with build_context() as ctx:
         try:
@@ -341,11 +341,14 @@ def list_entries(
 @app.command()
 def projects(
     client: Annotated[
-        str | None, typer.Argument(help="Client name to fuzzy-match (optional)")
+        str | None, typer.Argument(help="Client name to fuzzy-match for active projects (optional)")
     ] = None,
-    search: Annotated[str, typer.Option("-s", "--search", help="Fuzzy search (optional)")] = "",
+    search: Annotated[
+        str,
+        typer.Option("-s", "--search", help="Fuzzy search active project names (optional)"),
+    ] = "",
 ) -> None:
-    """List projects, optionally filtered by client."""
+    """List active projects, optionally filtered by client."""
     mode = get_mode()
     with build_context() as ctx:
         try:

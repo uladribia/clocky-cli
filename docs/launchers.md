@@ -16,7 +16,7 @@ Then bind **Super+C** → start timer, **Super+X** → stop timer.
 
 | Shortcut | Script | Action |
 |----------|--------|--------|
-| Super+C | `clocky-launcher.sh` | Zenity dialog → fuzzy project → start timer → notification |
+| Super+C | `clocky-launcher.sh` | Zenity dialog → fuzzy active-project search → start timer → notification |
 | Super+X | `clocky-stop.sh` | Stop timer → notification with duration |
 
 The launcher runs `clocky start --non-interactive` under the hood. No terminal needed.
@@ -24,7 +24,7 @@ The launcher runs `clocky start --non-interactive` under the hood. No terminal n
 ## Flow: start timer (Super+C)
 
 1. Zenity text entry: "Project name (fuzzy search)"
-2. `clocky start --non-interactive "<query>"` with the top weighted fuzzy match
+2. `clocky start --non-interactive "<query>"` with the top weighted fuzzy match from active projects
 3. If `CLOCKY_ERROR_MISSING_TAG_MAP` detected → Zenity asks for a tag
 4. Retry with `--tag "<tag_query>"`
 5. Desktop notification: "Timer started: Project Name / Tag: TagName"

@@ -76,6 +76,22 @@ class TestFuzzySearch:
         results = fuzzy_search_projects("roadmap", projects, entries)
         assert results[0][0].name == "Roadmap 2025"
 
+    def test_project_search_excludes_archived_projects(self) -> None:
+        projects = [
+            Project(id="proj-active", name="Roadmap Active", client_id=None, client_name=None),
+            Project(
+                id="proj-archived",
+                name="Roadmap Archived",
+                client_id=None,
+                client_name=None,
+                archived=True,
+            ),
+        ]
+
+        results = fuzzy_search_projects("archived", projects, [])
+
+        assert results == []
+
     def test_tag_search_boosts_project_specific_history(self) -> None:
         tags = [
             Tag(id="tag-ops", name="Ops", workspaceId="ws-001"),

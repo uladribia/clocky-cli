@@ -162,7 +162,7 @@ class MockClockifyAPI:
         return MOCK_WORKSPACES
 
     def get_projects(self, workspace_id: str) -> list[Project]:
-        """Return mock projects."""
+        """Return mock projects, including archived ones when configured."""
         del workspace_id  # unused
         return self._projects
 

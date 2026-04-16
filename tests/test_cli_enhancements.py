@@ -12,9 +12,10 @@ import pytest
 from typer.testing import CliRunner
 
 import clocky.cli.main as cli
+from clocky.domain.models import Project
 from clocky.infra.context import AppContext
 from clocky.infra.smoke_planner import RepresentativeCommand, SmokePlan
-from clocky.testing import MOCK_TIME_ENTRIES, MockClockifyAPI
+from clocky.testing import MOCK_PROJECTS, MOCK_TIME_ENTRIES, MockClockifyAPI
 
 
 @pytest.fixture
@@ -74,6 +75,32 @@ class TestJsonOutput:
         data = json.loads(result.output)
         assert isinstance(data, list)
         assert len(data) == 5
+
+    def test_projects_json_excludes_archived(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        api = MockClockifyAPI(
+            projects=[
+                *MOCK_PROJECTS,
+                Project(
+                    id="proj-archived",
+                    name="Archived Redesign",
+                    client_id="cli-001",
+                    client_name="Acme Corp",
+                    archived=True,
+                ),
+            ]
+        )
+        user = api.get_user()
+        ctx = AppContext(api=api, user=user, workspace_id=user.default_workspace)
+        monkeypatch.setattr(cli, "build_context", lambda: ctx)
+
+        result = runner.invoke(cli.app, ["--json", "projects"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert {project["id"] for project in data} == {project.id for project in MOCK_PROJECTS}
+        assert all(project["archived"] is False for project in data)
 
     def test_start_json(
         self, runner: CliRunner, ctx: AppContext, monkeypatch: pytest.MonkeyPatch

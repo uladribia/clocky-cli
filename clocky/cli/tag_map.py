@@ -14,6 +14,7 @@ import typer
 
 from clocky.cli_helpers.selection import fuzzy_choices
 from clocky.domain.fuzzy import SEARCH_HISTORY_LIMIT, fuzzy_search_projects, fuzzy_search_tags
+from clocky.domain.lookup import filter_active_projects
 from clocky.infra.context import build_context
 from clocky.infra.tag_map import TagMap, tag_map_path
 
@@ -122,12 +123,12 @@ def register(app: typer.Typer, console: Console) -> None:
 
     @tag_app.command("pick")
     def pick() -> None:
-        """Interactively choose a project and a tag, then persist the mapping.
+        """Interactively choose an active project and a tag, then persist the mapping.
 
         Uses fuzzy search + an interactive picker.
         """
         with build_context() as ctx:
-            projects = ctx.api.get_projects(ctx.workspace_id)
+            projects = filter_active_projects(ctx.api.get_projects(ctx.workspace_id))
             tags = ctx.api.get_tags(ctx.workspace_id)
             recent_entries = ctx.api.get_time_entries(
                 ctx.workspace_id,

@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 
 from rapidfuzz import fuzz
 
+from clocky.domain.lookup import filter_active_projects
 from clocky.domain.models import Project, Tag, TimeEntry
 
 DEFAULT_CUTOFF = 40.0
@@ -202,6 +203,8 @@ def fuzzy_search_projects(
 ) -> list[tuple[Project, float]]:
     """Fuzzy-search projects using lexical and recent-usage signals.
 
+    Archived projects are excluded from the candidate set.
+
     Args:
         query: User project query.
         projects: Available workspace projects.
@@ -214,9 +217,10 @@ def fuzzy_search_projects(
 
     """
     usage = build_usage_stats(entries)
+    active_projects = filter_active_projects(projects)
     matches = weighted_fuzzy_search(
         query,
-        projects,
+        active_projects,
         lambda project: project.name,
         cutoff=cutoff,
         limit=limit,
