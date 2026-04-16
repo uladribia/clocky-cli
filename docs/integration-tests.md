@@ -89,9 +89,11 @@ CLOCKY_INTEGRATION_CLI="clocky" uv run python scripts/integration_smoke.py
 
 - `--history-limit` is kept for CLI compatibility, but planning is now log-driven.
 - When no logs exist, smoke tests use the Dribia defaults above.
+- Project search smoke coverage now reflects production behaviour: archived projects are excluded from search results.
 - The `missing_tag` case probes recent candidates with `start --dry-run` and only
   uses one that still emits `CLOCKY_ERROR_MISSING_TAG_MAP`.
 - Representative commands influence test inputs only; assertions stay deterministic.
+- For local branch validation, prefer `uv run python -m clocky.cli ...` so you test the checked-out code instead of a global `clocky` binary.
 
 ## Exit codes
 

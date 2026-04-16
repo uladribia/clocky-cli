@@ -44,6 +44,7 @@ User input
 | `infra/gateway.py` protocol + `testing/fakes.py` | Tests can substitute the API without inheriting from the HTTP client |
 | `infra/tag_map.py` uses a frozen dataclass | Immutable `.set()` returns new instance; explicit `.save()` |
 | `domain/fuzzy.py` adds recent-usage priors | Better typo tolerance while preferring projects and tags you actually use |
+| `domain/lookup.py` filters active projects | Keeps archived projects out of user-facing project search flows |
 
 ## Dependencies
 

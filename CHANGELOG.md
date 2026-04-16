@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.5.1 - 2026-04-16
+
+### Fixed
+- Project search flows now exclude archived Clockify projects for `start`, `projects --search`, and `tag-map pick`.
+- Non-interactive project resolution now prefers the active project when archived and active projects have similar names.
+
+### Docs
+- Clarified across the README and command docs that clocky searches active projects only.
+- Documented local smoke validation with `python -m clocky.cli` to avoid testing a stale global install.
+
 ## 2.5.0 - 2026-03-29
 
 ### Changed

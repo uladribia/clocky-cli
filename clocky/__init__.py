@@ -3,4 +3,6 @@
 SPDX-License-Identifier: MIT
 """
 
-__version__ = "2.5.0"
+from __future__ import annotations
+
+__version__ = "2.5.1"
