@@ -13,6 +13,7 @@ from typer.testing import CliRunner
 
 import clocky.cli.main as cli
 from clocky.domain.models import Project
+from clocky.infra.api import ClockifyAPIError
 from clocky.infra.context import AppContext
 from clocky.infra.smoke_planner import RepresentativeCommand, SmokePlan
 from clocky.testing import MOCK_PROJECTS, MOCK_TIME_ENTRIES, MockClockifyAPI
@@ -204,6 +205,31 @@ class TestExitCodes:
         monkeypatch.setattr(cli, "build_context", lambda: ctx)
         result = runner.invoke(cli.app, ["start", "zzzznonexistent", "--non-interactive"])
         assert result.exit_code == 2
+
+    def test_start_timeout_is_graceful(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        monkeypatch.setattr(
+            "clocky.infra.query_cache._cache_path",
+            lambda: tmp_path / "query-cache.json",
+        )
+        api = MockClockifyAPI(
+            fail_get_time_entries=ClockifyAPIError(
+                "Clockify API timed out after 3 attempts. Please try again."
+            )
+        )
+        user = api.get_user()
+        ctx = AppContext(api=api, user=user, workspace_id=user.default_workspace)
+        monkeypatch.setattr(cli, "build_context", lambda: ctx)
+
+        result = runner.invoke(cli.app, ["start", "Website", "--non-interactive"])
+
+        assert result.exit_code == 1
+        assert "Clockify API timed out after 3 attempts" in result.output
+        assert "Traceback" not in result.output
 
 
 class TestIntegrationPlan:

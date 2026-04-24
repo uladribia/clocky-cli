@@ -9,6 +9,7 @@ description: Common issues and solutions for clocky-cli.
 - `API key missing` → run `clocky setup` or check `.env`
 - `No projects matching` → check spelling, try less specific query
 - `CLOCKY_ERROR_MISSING_TAG_MAP` → `clocky tag-map pick` to create mapping
+- `Clockify API timed out after 3 attempts` → retry; clocky now retries transient failures automatically
 - `uv command not found` → install `uv` (see [install.md](install.md))
 - `No colours` → check `NO_COLOR` env var
 - `Completion not working` → restart shell, check install instructions
@@ -58,6 +59,17 @@ This sentinel is emitted to stderr by `clocky start --non-interactive` when it c
 **Solution**: Create a tag mapping:
 - Interactively: `clocky tag-map pick`
 - By using `--tag` once: `clocky start "Project" --tag "MyTag"`
+
+## API timeout issues
+
+### `Clockify API timed out after 3 attempts. Please try again.`
+
+Clockify did not answer within the CLI timeout window. clocky retries transient timeouts 3 times before stopping.
+
+**Solution**:
+- Retry the command.
+- Check your network connection.
+- If launcher usage is affected, retry a few seconds later.
 
 ## Environment issues
 

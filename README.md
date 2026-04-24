@@ -7,6 +7,7 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 ## Features
 
 - **Start a timer** with fuzzy active-project search — handles typos and partial names
+- **Retries + graceful API failures** — transient API timeouts are retried 3 times and reported without Python tracebacks
 - **Stop** the currently running timer (with safety prompt for long-running timers)
 - **Status** — see what's running and for how long
 - **List** recent time entries in a formatted table
@@ -17,7 +18,7 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 - **`--dry-run`** to preview `start` without creating a timer
 - **`NO_COLOR`** env variable respected
 - **Ubuntu launchers** — bind `Super+C` / `Super+X` to start/stop timers via a GUI dialog
-- No local data persistence — only your API key is stored (in `.env`)
+- Minimal local persistence — API key in `.env`, plus local tag/query caches for faster repeated starts
 
 ---
 
@@ -31,7 +32,7 @@ A command-line interface for [Clockify](https://clockify.me) — start/stop time
 
 ## Installation
 
-> Version: **v2.5.1**
+> Version: **v2.5.2**
 
 ### 1. Clone the repository
 
@@ -137,6 +138,9 @@ clocky start "mobile" --no-auto-tag
 
 # Non-interactive (top weighted match, no prompts — for scripts/launchers)
 clocky start --non-interactive "cros-selling"
+
+# Exact repeated non-interactive queries are served from a local cache first
+clocky start --non-interactive "millores internes"
 
 # Preview without starting
 clocky start --dry-run "mobile app"

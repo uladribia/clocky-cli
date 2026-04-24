@@ -52,6 +52,12 @@ app = typer.Typer(
 )
 
 
+def _exit_runtime_error(exc: ClockifyAPIError) -> None:
+    """Render a user-friendly runtime error and exit with code 1."""
+    print_error(f"clocky: {exc}")
+    raise typer.Exit(1) from None
+
+
 def _version_callback(value: bool) -> None:
     """Print the package version and exit when ``--version`` is passed."""
     if value:
@@ -150,8 +156,11 @@ def integration_test(
 def status() -> None:
     """Show the currently running timer."""
     mode = get_mode()
-    with build_context() as ctx:
-        data = get_status_data(ctx)
+    try:
+        with build_context() as ctx:
+            data = get_status_data(ctx)
+    except ClockifyAPIError as exc:
+        _exit_runtime_error(exc)
 
     if not data.entry:
         if mode.json:
@@ -195,23 +204,23 @@ def start(
 ) -> None:
     """Start a new timer on an active project."""
     mode = get_mode()
-    with build_context() as ctx:
-        try:
-            data = start_timer(
-                ctx,
-                project,
-                description,
-                tags,
-                auto_tag=auto_tag,
-                non_interactive=non_interactive,
-                dry_run=dry_run,
-            )
-        except ServiceUsageError as exc:
-            print_error(f"clocky: {exc}")
-            raise typer.Exit(2) from None
-        except ClockifyAPIError as exc:
-            print_error(f"clocky: {exc}")
-            raise typer.Exit(1) from None
+    try:
+        with build_context() as ctx:
+            try:
+                data = start_timer(
+                    ctx,
+                    project,
+                    description,
+                    tags,
+                    auto_tag=auto_tag,
+                    non_interactive=non_interactive,
+                    dry_run=dry_run,
+                )
+            except ServiceUsageError as exc:
+                print_error(f"clocky: {exc}")
+                raise typer.Exit(2) from None
+    except ClockifyAPIError as exc:
+        _exit_runtime_error(exc)
 
     if data is None:
         raise typer.Exit(0)
@@ -264,35 +273,39 @@ def stop(
 ) -> None:
     """Stop the currently running timer (if any)."""
     mode = get_mode()
-    with build_context() as ctx:
-        status_data = get_status_data(ctx)
-        if not status_data.entry:
-            if mode.json:
-                emit_json(None)
+    try:
+        with build_context() as ctx:
+            status_data = get_status_data(ctx)
+            if not status_data.entry:
+                if mode.json:
+                    emit_json(None)
+                    return
+                print_no_timer()
                 return
-            print_no_timer()
-            return
 
-        elapsed = datetime.now(UTC) - (
-            status_data.entry.time_interval.start
-            if status_data.entry.time_interval.start.tzinfo
-            else status_data.entry.time_interval.start.replace(tzinfo=UTC)
-        )
-        if (
-            elapsed.total_seconds() > 8 * 3600
-            and not force
-            and sys.stdin.isatty()
-            and not mode.quiet
-        ):
-            from clocky.ui.display import format_duration
-
-            confirm = typer.confirm(
-                f"Timer has been running for {format_duration(elapsed)}. Stop it?"
+            elapsed = datetime.now(UTC) - (
+                status_data.entry.time_interval.start
+                if status_data.entry.time_interval.start.tzinfo
+                else status_data.entry.time_interval.start.replace(tzinfo=UTC)
             )
-            if not confirm:
-                raise typer.Exit(0)
 
-        data = stop_timer(ctx)
+            if (
+                elapsed.total_seconds() > 8 * 3600
+                and not force
+                and sys.stdin.isatty()
+                and not mode.quiet
+            ):
+                from clocky.ui.display import format_duration
+
+                confirm = typer.confirm(
+                    f"Timer has been running for {format_duration(elapsed)}. Stop it?"
+                )
+                if not confirm:
+                    raise typer.Exit(0)
+
+            data = stop_timer(ctx)
+    except ClockifyAPIError as exc:
+        _exit_runtime_error(exc)
 
     if data.entry is None:
         if mode.json:
@@ -320,8 +333,11 @@ def list_entries(
 ) -> None:
     """List recent time entries."""
     mode = get_mode()
-    with build_context() as ctx:
-        data = list_time_entries(ctx, limit)
+    try:
+        with build_context() as ctx:
+            data = list_time_entries(ctx, limit)
+    except ClockifyAPIError as exc:
+        _exit_runtime_error(exc)
 
     if mode.json:
         result = [
@@ -350,12 +366,15 @@ def projects(
 ) -> None:
     """List active projects, optionally filtered by client."""
     mode = get_mode()
-    with build_context() as ctx:
-        try:
-            data = list_projects(ctx, client, search)
-        except ServiceUsageError as exc:
-            print_error(f"clocky: {exc}")
-            raise typer.Exit(2) from None
+    try:
+        with build_context() as ctx:
+            try:
+                data = list_projects(ctx, client, search)
+            except ServiceUsageError as exc:
+                print_error(f"clocky: {exc}")
+                raise typer.Exit(2) from None
+    except ClockifyAPIError as exc:
+        _exit_runtime_error(exc)
 
     if data is None:
         raise typer.Exit(0)
@@ -387,13 +406,16 @@ def delete(
 ) -> None:
     """Delete a time entry by ID."""
     mode = get_mode()
-    with build_context() as ctx:
-        if not force and sys.stdin.isatty() and not mode.quiet:
-            confirm = typer.confirm(f"Delete time entry {entry_id}?")
-            if not confirm:
-                raise typer.Exit(0)
+    try:
+        with build_context() as ctx:
+            if not force and sys.stdin.isatty() and not mode.quiet:
+                confirm = typer.confirm(f"Delete time entry {entry_id}?")
+                if not confirm:
+                    raise typer.Exit(0)
 
-        data = delete_time_entry(ctx, entry_id)
+            data = delete_time_entry(ctx, entry_id)
+    except ClockifyAPIError as exc:
+        _exit_runtime_error(exc)
 
     if mode.json:
         emit_json({"deleted": data.entry_id})

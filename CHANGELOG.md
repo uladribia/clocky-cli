@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.5.2 - 2026-04-24
+
+### Added
+- Local query caching for repeated non-interactive `start` lookups to avoid redundant history fetches.
+
+### Changed
+- Clockify API requests now retry transient timeout and network failures up to 3 times before failing.
+
+### Fixed
+- Runtime API timeout failures now surface as short user-facing errors instead of raw Python tracebacks in launcher flows.
+
 ## 2.5.1 - 2026-04-16
 
 ### Fixed

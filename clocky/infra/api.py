@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import httpx
@@ -23,6 +24,9 @@ from clocky.domain.models import (
 )
 
 BASE_URL = "https://api.clockify.me/api/v1"
+REQUEST_TIMEOUT_SECONDS = 10.0
+MAX_RETRIES = 3
+RETRY_BACKOFF_SECONDS = 0.2
 
 
 class ClockifyAPIError(Exception):
@@ -46,18 +50,66 @@ class ClockifyAPI:
         self._client = httpx.Client(
             base_url=base_url,
             headers={"X-Api-Key": api_key, "Content-Type": "application/json"},
-            timeout=10.0,
+            timeout=REQUEST_TIMEOUT_SECONDS,
         )
 
     # -------------------------------------------------------------------------
     # Private helpers
     # -------------------------------------------------------------------------
 
+    def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: dict[str, str | int] | None = None,
+        json: dict[str, Any] | None = None,
+    ) -> httpx.Response:
+        """Execute an HTTP request with retries and friendly error messages.
+
+        Retries transient timeout and transport failures up to ``MAX_RETRIES``.
+
+        Args:
+            method: HTTP method.
+            url: Relative API URL.
+            params: Optional query parameters.
+            json: Optional JSON body.
+
+        Returns:
+            Successful HTTP response.
+
+        Raises:
+            ClockifyAPIError: If the request times out repeatedly or the network fails.
+            httpx.HTTPStatusError: If the server returns a non-success status code.
+
+        """
+        last_error: Exception | None = None
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = self._client.request(method, url, params=params, json=json)
+                response.raise_for_status()
+                return response
+            except httpx.TimeoutException as exc:
+                last_error = exc
+                if attempt == MAX_RETRIES:
+                    raise ClockifyAPIError(
+                        "Clockify API timed out after 3 attempts. Please try again."
+                    ) from None
+            except httpx.RequestError as exc:
+                last_error = exc
+                if attempt == MAX_RETRIES:
+                    raise ClockifyAPIError(
+                        "Clockify API is temporarily unreachable after 3 attempts. "
+                        "Please check your connection and try again."
+                    ) from None
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_BACKOFF_SECONDS * attempt)
+
+        raise ClockifyAPIError(str(last_error) if last_error else "Clockify API request failed")
+
     def _get(self, url: str, *, params: dict[str, str | int] | None = None) -> Any:
         """Execute a GET request and return the parsed JSON body."""
-        r = self._client.get(url, params=params)
-        r.raise_for_status()
-        return r.json()
+        return self._request("GET", url, params=params).json()
 
     def _get_list[T: BaseModel](
         self,
@@ -133,20 +185,24 @@ class ClockifyAPI:
             ClockifyAPIError: If the API rejects the request (e.g. 400 Bad Request).
 
         """
-        r = self._client.post(
-            f"/workspaces/{workspace_id}/time-entries",
-            json=request.to_api_dict(),
-        )
-        if r.status_code >= 400:
+        try:
+            r = self._request(
+                "POST",
+                f"/workspaces/{workspace_id}/time-entries",
+                json=request.to_api_dict(),
+            )
+        except httpx.HTTPStatusError as exc:
+            response = exc.response
             detail = ""
             try:
-                body = r.json()
+                body = response.json()
                 detail = body.get("message", "") or body.get("error", "")
             except Exception:  # noqa: BLE001
-                detail = r.text[:200] if r.text else ""
+                detail = response.text[:200] if response.text else ""
             raise ClockifyAPIError(
-                f"Failed to start timer (HTTP {r.status_code}): {detail or r.reason_phrase}"
-            )
+                f"Failed to start timer (HTTP {response.status_code}): "
+                f"{detail or response.reason_phrase}"
+            ) from None
         return TimeEntry.model_validate(r.json())
 
     def stop_timer(
@@ -156,17 +212,16 @@ class ClockifyAPI:
         request: StopTimerRequest,
     ) -> TimeEntry:
         """Stop the currently running timer."""
-        r = self._client.patch(
+        response = self._request(
+            "PATCH",
             f"/workspaces/{workspace_id}/user/{user_id}/time-entries",
             json={"end": request.end},
         )
-        r.raise_for_status()
-        return TimeEntry.model_validate(r.json())
+        return TimeEntry.model_validate(response.json())
 
     def delete_time_entry(self, workspace_id: str, entry_id: str) -> None:
         """Delete a time entry."""
-        r = self._client.delete(f"/workspaces/{workspace_id}/time-entries/{entry_id}")
-        r.raise_for_status()
+        self._request("DELETE", f"/workspaces/{workspace_id}/time-entries/{entry_id}")
 
     # -------------------------------------------------------------------------
     # Lifecycle

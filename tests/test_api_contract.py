@@ -5,6 +5,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
@@ -94,3 +95,41 @@ def test_start_timer_raises_clockify_api_error(api: ClockifyAPI, httpx_mock: HTT
                 project_id="proj-archived",
             ),
         )
+
+
+def test_get_user_retries_timeouts_before_success(api: ClockifyAPI, httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_exception(
+        httpx.ReadTimeout("slow"), method="GET", url="https://clocky.test/user"
+    )
+    httpx_mock.add_exception(
+        httpx.ReadTimeout("still slow"), method="GET", url="https://clocky.test/user"
+    )
+    httpx_mock.add_response(
+        method="GET",
+        url="https://clocky.test/user",
+        json={
+            "id": "user-001",
+            "name": "Test User",
+            "email": "test@example.com",
+            "defaultWorkspace": "ws-001",
+        },
+    )
+
+    user = api.get_user()
+
+    assert user.id == "user-001"
+
+
+def test_get_user_returns_friendly_timeout_after_three_attempts(
+    api: ClockifyAPI, httpx_mock: HTTPXMock
+) -> None:
+    for _ in range(3):
+        httpx_mock.add_exception(
+            httpx.ReadTimeout("slow"), method="GET", url="https://clocky.test/user"
+        )
+
+    with pytest.raises(
+        ClockifyAPIError,
+        match="Clockify API timed out after 3 attempts. Please try again.",
+    ):
+        api.get_user()

@@ -17,6 +17,7 @@ from clocky.domain.models import (
     User,
     Workspace,
 )
+from clocky.infra.api import ClockifyAPIError
 
 # -----------------------------------------------------------------------------
 # Fixtures
@@ -135,6 +136,8 @@ class MockClockifyAPI:
         tags: list[Tag] | None = None,
         clients: list[Client] | None = None,
         time_entries: list[TimeEntry] | None = None,
+        fail_get_user: ClockifyAPIError | None = None,
+        fail_get_time_entries: ClockifyAPIError | None = None,
     ) -> None:
         """Create mock API.
 
@@ -144,6 +147,9 @@ class MockClockifyAPI:
             tags: Custom list of tags for this mock instance.
             clients: Custom list of clients for this mock instance.
             time_entries: Custom list of time entries for this mock instance.
+            fail_get_user: Optional runtime error raised by ``get_user()``.
+            fail_get_time_entries: Optional runtime error raised by
+                ``get_time_entries()``.
 
         """
         # Skip parent __init__ — no HTTP client needed
@@ -152,9 +158,14 @@ class MockClockifyAPI:
         self._tags = tags if tags is not None else MOCK_TAGS
         self._clients = clients if clients is not None else MOCK_CLIENTS
         self._time_entries = time_entries if time_entries is not None else MOCK_TIME_ENTRIES
+        self._fail_get_user = fail_get_user
+        self._fail_get_time_entries = fail_get_time_entries
+        self.get_time_entries_calls = 0
 
     def get_user(self) -> User:
         """Return mock user."""
+        if self._fail_get_user is not None:
+            raise self._fail_get_user
         return MOCK_USER
 
     def get_workspaces(self) -> list[Workspace]:
@@ -184,6 +195,9 @@ class MockClockifyAPI:
     ) -> list[TimeEntry]:
         """Return mock time entries."""
         del workspace_id, user_id  # unused
+        self.get_time_entries_calls += 1
+        if self._fail_get_time_entries is not None:
+            raise self._fail_get_time_entries
         return self._time_entries[:limit]
 
     def get_running_timer(self, workspace_id: str, user_id: str) -> TimeEntry | None:

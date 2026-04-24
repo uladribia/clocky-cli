@@ -72,6 +72,12 @@ For scripts and launchers. It uses the same weighted ranking as interactive mode
 clocky start --non-interactive "cros-selling"
 ```
 
+Repeated non-interactive queries are cached locally in `~/.cache/clocky/query-cache.json`. Exact repeat queries are resolved from that cache before history-based ranking, which keeps common launcher flows fast.
+
+## API retries and friendly failures
+
+`clocky start` retries transient Clockify API timeouts up to 3 times before failing with a short runtime error instead of a full Python traceback.
+
 ## Full options
 
 | Option | Short | Default | Description |

@@ -23,6 +23,7 @@ from clocky.domain.lookup import (
 from clocky.domain.models import Project, StartTimerRequest, StopTimerRequest, TimeEntry
 from clocky.infra.api import ClockifyAPIError
 from clocky.infra.context import AppContext
+from clocky.infra.query_cache import QueryCache
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,7 @@ class StartTimerData:
     entry: TimeEntry | None = None
     dry_run: bool = False
     stopped_previous: bool = False
+    used_query_cache: bool = False
 
 
 @dataclass(frozen=True)
@@ -94,6 +96,23 @@ def get_status_data(ctx: AppContext) -> StatusData:
     return StatusData(entry=entry, project_name=project_name, tag_names=tag_names)
 
 
+def _resolve_cached_project(
+    ctx: AppContext,
+    project_query: str,
+) -> tuple[Project, QueryCache] | None:
+    """Resolve a repeated query from the local cache before history lookups."""
+    cache = QueryCache.load()
+    cached = cache.get(project_query)
+    if not cached:
+        return None
+
+    active_projects = filter_active_projects(ctx.api.get_projects(ctx.workspace_id))
+    project = next((item for item in active_projects if item.id == cached.project_id), None)
+    if not project:
+        return None
+    return project, cache
+
+
 def start_timer(
     ctx: AppContext,
     project_query: str,
@@ -112,35 +131,73 @@ def start_timer(
         ServiceUsageError: If no project matches the supplied query.
 
     """
-    all_projects = filter_active_projects(ctx.api.get_projects(ctx.workspace_id))
-    recent_entries = ctx.api.get_time_entries(
-        ctx.workspace_id,
-        ctx.user.id,
-        limit=SEARCH_HISTORY_LIMIT,
-    )
-    matches = fuzzy_search_projects(project_query, all_projects, recent_entries)
-    if not matches:
-        raise ServiceUsageError(f"No projects matching '{project_query}'")
+    cache = QueryCache.load()
+    recent_entries: list[TimeEntry] | None = None
+    used_query_cache = False
 
-    chosen = pick_one(matches, "name", non_interactive=non_interactive)
-    if not chosen:
-        return None
+    cached_resolution = _resolve_cached_project(ctx, project_query) if non_interactive else None
+    if cached_resolution is not None:
+        chosen, cache = cached_resolution
+        used_query_cache = True
+        if tags is None:
+            cached_entry = cache.get(project_query)
+            assert cached_entry is not None
+            tag_ids = list(cached_entry.tag_ids)
+            tag_names = list(cached_entry.tag_names)
+        else:
+            all_tags = ctx.api.get_tags(ctx.workspace_id)
+            tag_ids = resolve_tag_ids(
+                ctx.api,
+                ctx.workspace_id,
+                ctx.user.id,
+                chosen.id,
+                chosen.name,
+                tags,
+                all_tags,
+                auto_tag=auto_tag,
+                non_interactive=non_interactive,
+            )
+            tag_map = {tag.id: tag.name for tag in all_tags}
+            tag_names = resolve_tag_names(tag_map, tag_ids)
+    else:
+        all_projects = filter_active_projects(ctx.api.get_projects(ctx.workspace_id))
+        recent_entries = ctx.api.get_time_entries(
+            ctx.workspace_id,
+            ctx.user.id,
+            limit=SEARCH_HISTORY_LIMIT,
+        )
+        matches = fuzzy_search_projects(project_query, all_projects, recent_entries)
+        if not matches:
+            raise ServiceUsageError(f"No projects matching '{project_query}'")
 
-    all_tags = ctx.api.get_tags(ctx.workspace_id)
-    tag_ids = resolve_tag_ids(
-        ctx.api,
-        ctx.workspace_id,
-        ctx.user.id,
-        chosen.id,
-        chosen.name,
-        tags,
-        all_tags,
-        auto_tag=auto_tag,
-        non_interactive=non_interactive,
-        recent_entries=recent_entries,
+        chosen = pick_one(matches, "name", non_interactive=non_interactive)
+        if not chosen:
+            return None
+
+        all_tags = ctx.api.get_tags(ctx.workspace_id)
+        tag_ids = resolve_tag_ids(
+            ctx.api,
+            ctx.workspace_id,
+            ctx.user.id,
+            chosen.id,
+            chosen.name,
+            tags,
+            all_tags,
+            auto_tag=auto_tag,
+            non_interactive=non_interactive,
+            recent_entries=recent_entries,
+        )
+        tag_map = {tag.id: tag.name for tag in all_tags}
+        tag_names = resolve_tag_names(tag_map, tag_ids)
+
+    cache = cache.remember(
+        project_query,
+        project_id=chosen.id,
+        project_name=chosen.name,
+        tag_ids=tag_ids,
+        tag_names=tag_names,
     )
-    tag_map = {tag.id: tag.name for tag in all_tags}
-    tag_names = resolve_tag_names(tag_map, tag_ids)
+    cache.save()
 
     if dry_run:
         return StartTimerData(
@@ -149,6 +206,7 @@ def start_timer(
             tag_ids=tag_ids,
             tag_names=tag_names,
             dry_run=True,
+            used_query_cache=used_query_cache,
         )
 
     running = ctx.api.get_running_timer(ctx.workspace_id, ctx.user.id)
@@ -170,6 +228,7 @@ def start_timer(
         tag_names=tag_names,
         entry=entry,
         stopped_previous=stopped_previous,
+        used_query_cache=used_query_cache,
     )
 
 
